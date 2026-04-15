@@ -1,0 +1,28 @@
+# model config - paths and optional per-model settings
+
+# --- Qwen3 models (reasoning-capable, Apache 2.0) ---
+
+qwen3-8b:
+  model_path: "Qwen/Qwen3-8B"
+
+
+# --- Nvidia Nemotron reasoning models (Nvidia Open Model License) ---
+# openreasoning-nemotron-7b is built on qwen2.5-7b, post-trained for reasoning (math, code, science)
+
+nemotron-7b:
+  model_path: "nvidia/OpenReasoning-Nemotron-7B"
+
+
+# --- Nvidia OpenCodeReasoning-Nemotron models (Nvidia Open Model License) ---
+
+code-nemotron-7b:
+  model_path: "nvidia/OpenCodeReasoning-Nemotron-7B"
+
+
+# --- OLMo thinking models (AllenAI, Apache 2.0) ---
+# olmo_style: true — chat template injects <think> opening tag automatically;
+# a missing </think> in generated output causes response truncation
+
+olmo-3-7b-think:
+  model_path: "allenai/OLMo-3-7B-Think"
+  olmo_style: true  # chat template injects <think> opening tag; missing </think> = truncation
