@@ -16,5 +16,11 @@ build/
 # environment secrets
 .env
 
+# harness input/output (generated artefacts, not tracked)
+harness/bigcodebench/input/
+harness/bigcodebench/output/
+harness/editbench/input/
+harness/editbench/output/
+
 # editor
 .DS_Store
