@@ -12,7 +12,6 @@ include = ["src*"]
 name = "think-overflow"
 readme = "README.md"
 version = "0.dev0"
-dynamic = ["dependencies"]
 authors = [{ name = "Lukas Twist", email = "itsluketwist@gmail.com" }]
 classifiers = [
     "Programming Language :: Python",
@@ -20,22 +19,9 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
-
-[project.optional-dependencies]
-dev = [
-    "pre-commit",
-    "pytest",
-    "uv",
-]
-
 [tool.pytest.ini_options]
 # suppress INFO-level log messages from vllm and other noisy libraries
 log_level = "WARNING"
 
 [project.scripts]
 run = "src.cli:main"
-
-[tool.uv]
-exclude-newer = "7 days"
