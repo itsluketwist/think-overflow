@@ -550,6 +550,7 @@ def run_inference(
                             finish_reasons=finish_reasons,
                             truncated_flags=eval_truncated_flags,
                             two_pass=is_two_pass,
+                            dataset_name=Path(dataset_path).stem,
                         )
 
                     log(
@@ -597,14 +598,12 @@ def run_inference(
         log("Results:")
         for dataset_path, analysis in eval_results:
             stats = analysis["statistics"]
-            reasoning_acc = stats["reasoning_accuracy"]
-            acc_str = f"{reasoning_acc:.1%}" if reasoning_acc is not None else "n/a"
             log(
                 f"  {dataset_path}: "
                 f"pass@1={analysis['pass_at_1']:.2%}, "
                 f"pass@{analysis['k']}={analysis['pass_at_k']:.2%}, "
                 f"reasoning={stats['any_reasoning']:.1%}, "
-                f"pass@1|reasoning={acc_str}",
+                f"valid={stats['valid_reasoning']:.1%}",
             )
     log()
     log("Done.")

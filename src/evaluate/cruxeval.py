@@ -6,7 +6,7 @@ from typing import Any
 
 from src.evaluate.code import _execute_code
 from src.evaluate.parser import ParsedResponse
-from src.evaluate.statistics import _compute_pass_at_1, wilson_ci
+from src.evaluate.statistics import compute_pass_at_1, wilson_ci
 
 
 # matches the [ANSWER]...[/ANSWER] block used in the original CRUXEval prompts
@@ -108,6 +108,7 @@ def _check_input_prediction(predicted: str, code: str, expected_output: str) -> 
 def evaluate_cruxeval(
     responses: list[list[ParsedResponse]],
     records: list[dict[str, Any]],
+    dataset_name: str | None = None,
 ) -> tuple[dict, list[dict]]:
     """Evaluate CRUXEval input/output prediction responses.
 
@@ -201,7 +202,7 @@ def evaluate_cruxeval(
 
     total = len(results)
     # averaged pass@1: treat each sample index as an independent trial and average
-    pass_at_1_list, pass_at_1, pass_at_1_ci = _compute_pass_at_1(
+    pass_at_1_list, pass_at_1, pass_at_1_ci = compute_pass_at_1(
         counts=per_sample_correct,
         total=total,
         k=k,

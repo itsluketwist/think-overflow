@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from src.evaluate.parser import ParsedResponse
-from src.evaluate.statistics import _compute_pass_at_1, wilson_ci
+from src.evaluate.statistics import compute_pass_at_1, wilson_ci
 
 
 # default timeout for standard code execution
@@ -230,6 +230,17 @@ def _run_pytest_tests(
     return False, error[:500] if error else f"exit code {result.returncode}"
 
 
+# datasets that require an official external harness for accurate scoring —
+# test execution is skipped for these; only structural fields are recorded.
+# add new dataset stems here when they need offline evaluation.
+_OFFICIAL_HARNESS_DATASETS: frozenset[str] = frozenset(
+    {
+        "bigcodebench",
+        "editbench",
+    }
+)
+
+
 def _evaluate_response(
     response: str,
     record: dict[str, Any],
@@ -266,10 +277,13 @@ def _evaluate_response(
 def evaluate_code(
     responses: list[list[ParsedResponse]],
     records: list[dict[str, Any]],
+    dataset_name: str | None = None,
 ) -> tuple[dict, list[dict]]:
     """Evaluate code responses by executing them against test cases in each record.
 
     Evaluates the answer section only; also checks correct_in_reasoning as a diagnostic.
+    Pass dataset_name (file stem) to skip test execution for benchmarks listed in
+    _OFFICIAL_HARNESS_DATASETS — those are scored offline via their official harnesses.
 
     Returns a dict with pass_at_1, pass_at_1_list, pass_at_k, k, total, and a per-task breakdown.
     """
@@ -279,10 +293,24 @@ def evaluate_code(
     per_sample_passed = [0] * k
     pass_at_k_count = 0
 
+    # skip test execution for datasets that use official external harnesses
+    skip_execution = dataset_name in _OFFICIAL_HARNESS_DATASETS
+
     for sample_parsed, record in zip(responses, records):
-        sample_results = []
+        sample_results: list[dict[str, Any]] = []
 
         for p in sample_parsed:
+            if skip_execution:
+                sample_results.append(
+                    {
+                        "passed": None,
+                        "output": None,
+                        "answer_extracted": p.answer.strip() != "",
+                        "correct_in_reasoning": None,
+                    }
+                )
+                continue
+
             # primary evaluation: answer section only
             # empty answer section = model failed to produce code after reasoning
             if p.answer.strip():
@@ -337,7 +365,7 @@ def evaluate_code(
 
     total = len(results)
     # averaged pass@1: treat each sample index as an independent trial and average
-    pass_at_1_list, pass_at_1, pass_at_1_ci = _compute_pass_at_1(
+    pass_at_1_list, pass_at_1, pass_at_1_ci = compute_pass_at_1(
         counts=per_sample_passed,
         total=total,
         k=k,

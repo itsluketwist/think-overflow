@@ -33,21 +33,7 @@ def wilson_ci(
     return [max(0.0, center - margin), min(1.0, center + margin)]
 
 
-def _is_correct(sample: dict[str, Any]) -> bool:
-    """Return True if the sample is correct, checking both 'correct' and 'passed' keys."""
-    if "correct" in sample:
-        return sample["correct"]
-    if "passed" in sample:
-        return sample["passed"]
-    return False
-
-
-def _is_correct_anywhere(sample: dict[str, Any]) -> bool:
-    """Return True if the sample is correct in the answer section OR the reasoning block."""
-    return _is_correct(sample) or bool(sample.get("correct_in_reasoning"))
-
-
-def _compute_pass_at_1(
+def compute_pass_at_1(
     counts: list[int],
     total: int,
     k: int,
@@ -87,8 +73,8 @@ def compute_reasoning_statistics(
 
     Returns a dict with keys: reasoning_block, any_reasoning, valid_reasoning,
     reasoning_truncation_rate (two-pass only), reasoning_overflow_rate (baseline only),
-    answer_overflow_rate (both), reasoning_accuracy, reasoning_leak_accuracy
-    (each as a scalar and a _list variant; reasoning_accuracy(_list) may be None/contain None).
+    answer_overflow_rate (both), answer_extracted_rate
+    (each as a scalar and a _list variant).
     """
     from src.utils.log import log
 
@@ -108,10 +94,6 @@ def compute_reasoning_statistics(
             "answer_overflow_rate_list": [],
             "answer_extracted_rate": 0.0,
             "answer_extracted_rate_list": [],
-            "reasoning_accuracy": None,
-            "reasoning_accuracy_list": [],
-            "reasoning_leak_accuracy": None,
-            "reasoning_leak_accuracy_list": [],
         }
 
     # k is taken from the first task; tasks with fewer samples contribute to fewer indices
@@ -129,11 +111,6 @@ def compute_reasoning_statistics(
     # both modes: final generation hit the token limit (pass 2 or baseline answer)
     answer_overflow_counts = [0] * k
     extracted_counts = [0] * k
-    # for reasoning_accuracy: track correct and total per sample index
-    correct_reasoning_counts = [0] * k
-    total_reasoning_counts = [0] * k
-    # for leak accuracy: correct per sample index (denominator is total_tasks)
-    correct_leak_counts = [0] * k
 
     for task_idx, (task_parsed, task_breakdown) in enumerate(
         zip(parsed_responses, results_breakdown),
@@ -152,10 +129,6 @@ def compute_reasoning_statistics(
 
             if p.has_valid_reasoning:
                 valid_reasoning_counts[sample_idx] += 1
-                # conditional accuracy: only tasks where this sample has valid reasoning
-                total_reasoning_counts[sample_idx] += 1
-                if _is_correct(sample):
-                    correct_reasoning_counts[sample_idx] += 1
 
             if two_pass:
                 # reasoning_truncation: pass 1 hit the max_think_tokens cap
@@ -183,10 +156,6 @@ def compute_reasoning_statistics(
             if sample.get("answer_extracted", True):
                 extracted_counts[sample_idx] += 1
 
-            # leak accuracy: correct in answer or reasoning block
-            if _is_correct_anywhere(sample):
-                correct_leak_counts[sample_idx] += 1
-
     # compute per-sample-index rates
     reasoning_block_list = [c / total_tasks for c in block_counts]
     any_reasoning_list = [c / total_tasks for c in any_reasoning_counts]
@@ -197,16 +166,6 @@ def compute_reasoning_statistics(
     reasoning_overflow_rate_list = [c / total_tasks for c in reasoning_overflow_counts]
     answer_overflow_rate_list = [c / total_tasks for c in answer_overflow_counts]
     answer_extracted_rate_list = [c / total_tasks for c in extracted_counts]
-    reasoning_accuracy_list: list[float | None] = [
-        (correct_reasoning_counts[i] / total_reasoning_counts[i])
-        if total_reasoning_counts[i]
-        else None
-        for i in range(k)
-    ]
-    # leak denominator is always total_tasks (guaranteed >= 1 here)
-    reasoning_leak_accuracy_list: list[float] = [
-        correct_leak_counts[i] / total_tasks for i in range(k)
-    ]
 
     # average the per-sample-index rates for the scalar summary keys
     reasoning_block = sum(reasoning_block_list) / k
@@ -216,24 +175,12 @@ def compute_reasoning_statistics(
     reasoning_overflow_rate = sum(reasoning_overflow_rate_list) / k
     answer_overflow_rate = sum(answer_overflow_rate_list) / k
     answer_extracted_rate = sum(answer_extracted_rate_list) / k
-    # for conditional accuracy: average only the non-None entries
-    valid_reasoning_acc = [v for v in reasoning_accuracy_list if v is not None]
-    reasoning_accuracy: float | None = (
-        sum(valid_reasoning_acc) / len(valid_reasoning_acc)
-        if valid_reasoning_acc
-        else None
-    )
-    reasoning_leak_accuracy: float = sum(reasoning_leak_accuracy_list) / len(
-        reasoning_leak_accuracy_list
-    )
 
-    fmt_acc = f"{reasoning_accuracy:.1%}" if reasoning_accuracy is not None else "n/a"
     log(
         f"    Reasoning: block={reasoning_block:.1%}, any={any_reasoning:.1%}, "
         f"valid={valid_reasoning:.1%}, truncation={reasoning_truncation_rate:.1%}, "
         f"reasoning_overflow={reasoning_overflow_rate:.1%}, "
-        f"answer_overflow={answer_overflow_rate:.1%}, extracted={answer_extracted_rate:.1%}, "
-        f"accuracy={fmt_acc}, leak={reasoning_leak_accuracy:.1%}",
+        f"answer_overflow={answer_overflow_rate:.1%}, extracted={answer_extracted_rate:.1%}",
     )
 
     return {
@@ -251,10 +198,6 @@ def compute_reasoning_statistics(
         "answer_overflow_rate_list": answer_overflow_rate_list,
         "answer_extracted_rate": answer_extracted_rate,
         "answer_extracted_rate_list": answer_extracted_rate_list,
-        "reasoning_accuracy": reasoning_accuracy,
-        "reasoning_accuracy_list": reasoning_accuracy_list,
-        "reasoning_leak_accuracy": reasoning_leak_accuracy,
-        "reasoning_leak_accuracy_list": reasoning_leak_accuracy_list,
     }
 
 

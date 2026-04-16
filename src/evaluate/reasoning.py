@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 from src.evaluate.parser import ParsedResponse
-from src.evaluate.statistics import _compute_pass_at_1, wilson_ci
+from src.evaluate.statistics import compute_pass_at_1, wilson_ci
 
 
 # patterns applied to the full (uppercased) response text
@@ -43,6 +43,7 @@ def _extract_choice(response: str) -> str | None:
 def evaluate_reasoning(
     responses: list[list[ParsedResponse]],
     records: list[dict[str, Any]],
+    dataset_name: str | None = None,
 ) -> tuple[dict, list[dict]]:
     """Evaluate multiple-choice responses by extracting and comparing letter choices.
 
@@ -109,7 +110,7 @@ def evaluate_reasoning(
 
     total = len(results)
     # averaged pass@1: treat each sample index as an independent trial and average
-    pass_at_1_list, pass_at_1, pass_at_1_ci = _compute_pass_at_1(
+    pass_at_1_list, pass_at_1, pass_at_1_ci = compute_pass_at_1(
         counts=per_sample_correct,
         total=total,
         k=k,

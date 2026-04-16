@@ -30,6 +30,7 @@ def evaluate(
     finish_reasons: list[list[str]] | None = None,
     truncated_flags: list[list[bool]] | None = None,
     two_pass: bool = False,
+    dataset_name: str | None = None,
 ) -> tuple[dict, list[dict]]:
     """Evaluate model responses against ground truth, dispatching on eval_type.
 
@@ -39,6 +40,8 @@ def evaluate(
     Pass truncated_flags ([task][sample] booleans) for overflow rate computation —
     two-pass: pass 1 cap-hit flags; baseline: finish_reason=="length" flags.
     Set two_pass=True to use two-pass overflow logic (see compute_reasoning_statistics).
+    Pass dataset_name (file stem) so evaluators can apply dataset-specific behaviour
+    (e.g. skipping test execution for benchmarks with official harnesses).
 
     Returns a result dict (including a 'statistics' sub-dict) and a per-task breakdown list.
     """
@@ -62,6 +65,7 @@ def evaluate(
     result, breakdown = evaluator(
         responses=parsed,
         records=records,
+        dataset_name=dataset_name,
     )
 
     # compute reasoning statistics over all parsed responses

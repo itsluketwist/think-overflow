@@ -26,6 +26,7 @@ eval_datasets=(
     "code/evalplus"
     "code/livecodebench"
     "code/bigcodebench"
+    "code/editbench"
     "crux/cruxeval_i"
     "crux/cruxeval_o"
     "reasoning/gpqa"
@@ -37,13 +38,13 @@ inference_config="greedy"
 
 # reasoning token caps to sweep (pass 1 max tokens)
 max_think_tokens=(
-    4096
-    8192
-    12288
-    16384
-    20480
-    24576
-    28664
+    # 4096
+    # 8192
+    # 12288
+    # 16384
+    # 20480
+    # 24576
+    # 28664
 )
 
 # overflow suffix keys (see _OVERFLOW_SUFFIXES in src/run_infer.py):
@@ -60,7 +61,7 @@ overflow_suffixes=(
 )
 
 # run single-pass baseline inference instead of two-pass inference
-baseline=false
+baseline=true
 
 # force regeneration even if output file already exists
 update=true
