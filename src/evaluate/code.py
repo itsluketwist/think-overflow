@@ -236,6 +236,7 @@ def _run_pytest_tests(
 _OFFICIAL_HARNESS_DATASETS: frozenset[str] = frozenset(
     {
         "bigcodebench",
+        "codereval",
         "editbench",
     }
 )

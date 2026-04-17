@@ -27,10 +27,12 @@ eval_datasets=(
     "code/livecodebench"
     "code/bigcodebench"
     "code/editbench"
+    "code/codereval"
     "crux/cruxeval_i"
     "crux/cruxeval_o"
     "reasoning/gpqa"
     "math/gsm8k"
+    "math/math500"
 )
 
 # config profile for inference (from config/inference.yaml)

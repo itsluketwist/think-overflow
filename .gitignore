@@ -1,5 +1,6 @@
 # generated output (inference results, stats)
-output/
+output/full_baseline/
+output/full_transition/
 
 # python
 __pycache__/
@@ -17,10 +18,12 @@ build/
 .env
 
 # harness input/output (generated artefacts, not tracked)
-harness/bigcodebench/input/
-harness/bigcodebench/output/
-harness/editbench/input/
-harness/editbench/output/
+harness/bigcodebench/
+harness/codereval/
+harness/editbench/
 
 # editor
 .DS_Store
+
+# project
+todo.txt
