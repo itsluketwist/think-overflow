@@ -66,7 +66,7 @@ overflow_suffixes=(
 baseline=true
 
 # force regeneration even if output file already exists
-update=true
+update=false
 
 ###############################################################################
 #                              submit jobs                                    #
@@ -105,7 +105,7 @@ if [ "$baseline" = true ]; then
         sbatch <<EOF
 #!/bin/bash -l
 #SBATCH --job-name=infer-${model}-baseline
-#SBATCH --output=/users/%u/logs/infer-${model}-baseline/%j.out
+#SBATCH --output=/users/%u/code/think-overflow/logs/infer-${model}/baseline-%j.out
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu
 #SBATCH --gpus=1
@@ -137,7 +137,7 @@ else
                 sbatch <<EOF
 #!/bin/bash -l
 #SBATCH --job-name=infer-${model}-mt${tokens}-${suffix}
-#SBATCH --output=/users/%u/logs/infer-${model}-mt${tokens}-${suffix}/%j.out
+#SBATCH --output=/users/%u/code/think-overflow/logs/infer-${model}/mt${tokens}-${suffix}-%j.out
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu
 #SBATCH --gpus=1
