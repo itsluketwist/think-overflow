@@ -1,6 +1,6 @@
 # generated output (inference results, stats)
-output/full_baseline/
-output/full_transition/
+output/full_baseline/*
+output/full_transition/*
 
 # python
 __pycache__/
@@ -27,3 +27,4 @@ harness/editbench/
 
 # project
 todo.txt
+logs/*
