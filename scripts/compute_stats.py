@@ -4,8 +4,8 @@ Run from the repository root:
     python scripts/compute_stats.py           # skip already-computed entries
     python scripts/compute_stats.py --update  # recompute everything
 
-Results are saved to output/stats/{series_key}/{dataset_label}.json.
-Add new models to SERIES (and DATASETS if needed) then re-run to extend the dataset.
+Results are saved to output/token_stats/{model_key}/{dataset}_{config}{file_suffix}.json.
+Add new models or datasets then re-run to extend.
 """
 
 import argparse
@@ -26,16 +26,16 @@ from evaluate.parser import parse_response
 # Configuration — edit these to add or remove models and datasets
 # ---------------------------------------------------------------------------
 
-# series: each entry is a (model, decoding strategy) combination.
-# file_suffix is appended to each dataset's base file stem when looking for
-# the inference output (e.g. suffix "_steer" turns "evalplus_greedy" →
-# "evalplus_greedy_steer").
+# series: each entry is a (model, run type) combination.
+# file_suffix is appended to each dataset's base file stem to form the
+# inference filename (e.g. "_baseline" turns "evalplus_greedy" →
+# "evalplus_greedy_baseline").
 SERIES: dict[str, dict] = {
     "qwen3_greedy": {
         "model_key": "qwen3-8b",
         "hf_path": "Qwen/Qwen3-8B",
         "olmo_style": False,
-        "file_suffix": "",
+        "file_suffix": "_baseline",
     },
     "qwen3_prompt_strict": {
         "model_key": "qwen3-8b",
@@ -53,7 +53,7 @@ SERIES: dict[str, dict] = {
         "model_key": "olmo-3-7b-think",
         "hf_path": "allenai/OLMo-3-7B-Think",
         "olmo_style": True,
-        "file_suffix": "",
+        "file_suffix": "_baseline",
     },
     "olmo_prompt_strict": {
         "model_key": "olmo-3-7b-think",
@@ -67,29 +67,11 @@ SERIES: dict[str, dict] = {
         "olmo_style": True,
         "file_suffix": "_steer-strict",
     },
-    "nemotron_greedy": {
-        "model_key": "nemotron-7b",
-        "hf_path": "nvidia/OpenReasoning-Nemotron-7B",
-        "olmo_style": False,
-        "file_suffix": "",
-    },
-    "nemotron_prompt_strict": {
-        "model_key": "nemotron-7b",
-        "hf_path": "nvidia/OpenReasoning-Nemotron-7B",
-        "olmo_style": False,
-        "file_suffix": "_prompt-strict",
-    },
-    "nemotron_steer_strict": {
-        "model_key": "nemotron-7b",
-        "hf_path": "nvidia/OpenReasoning-Nemotron-7B",
-        "olmo_style": False,
-        "file_suffix": "_steer-strict",
-    },
     "code_nemotron_greedy": {
         "model_key": "code-nemotron-7b",
         "hf_path": "nvidia/OpenCodeReasoning-Nemotron-7B",
         "olmo_style": False,
-        "file_suffix": "",
+        "file_suffix": "_baseline",
     },
     "code_nemotron_prompt_strict": {
         "model_key": "code-nemotron-7b",
@@ -109,10 +91,13 @@ SERIES: dict[str, dict] = {
 DATASETS: dict[str, tuple[str, str]] = {
     "evalplus": ("evalplus_greedy", "code/evalplus.jsonl"),
     "livecodebench": ("livecodebench_greedy", "code/livecodebench.jsonl"),
+    "bigcodebench": ("bigcodebench_greedy", "code/bigcodebench.jsonl"),
+    "editbench": ("editbench_greedy", "code/editbench.jsonl"),
+    "codereval": ("codereval_greedy", "code/codereval.jsonl"),
     "cruxeval_i": ("cruxeval_i_greedy", "crux/cruxeval_i.jsonl"),
     "cruxeval_o": ("cruxeval_o_greedy", "crux/cruxeval_o.jsonl"),
-    "bigcodebench": ("bigcodebench_greedy", "code/bigcodebench.jsonl"),
     "gsm8k": ("gsm8k_greedy", "math/gsm8k.jsonl"),
+    "math500": ("math500_greedy", "math/math500.jsonl"),
     "gpqa": ("gpqa_greedy", "reasoning/gpqa.jsonl"),
 }
 
@@ -124,14 +109,40 @@ MAX_TOKENS: int = 32768
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).parent.parent
-INFER_DIR = REPO_ROOT / "output" / "infer"
-DATA_DIR = REPO_ROOT / "data"
-OUTPUT_DIR = REPO_ROOT / "output" / "stats"
+# inference results: output/full_baseline/{model}/{dataset}_{config}_{run}.json
+INFER_DIR = REPO_ROOT / "output" / "full_baseline"
+# per-model summary files (pass_at_1 lives here): output/{model}.json
+SUMMARY_DIR = REPO_ROOT / "output"
+# stats output: output/token_stats/{model}/{dataset}_{config}{file_suffix}.json
+OUTPUT_DIR = REPO_ROOT / "output" / "token_stats"
 
 
 # ---------------------------------------------------------------------------
 # Core computation
 # ---------------------------------------------------------------------------
+
+
+def load_pass_at_1(
+    model_key: str,
+    data: dict,
+) -> float:
+    """Look up pass@1 for this run from the per-model summary file.
+
+    The summary file (output/{model}.json) stores results keyed by
+    "{dataset}/{name}_{config}_{run_name}". Returns nan if the summary
+    file or the key is missing.
+    """
+    summary_path = SUMMARY_DIR / f"{model_key}.json"
+    if not summary_path.exists():
+        return float("nan")
+
+    with open(summary_path) as f:
+        summary = json.load(f)
+
+    # reconstruct the summary key from the inference file's own metadata
+    meta = data["metadata"]
+    summary_key = f"{meta['dataset']}_{meta['config_profile']}_{meta['run_name']}"
+    return summary.get(summary_key, {}).get("pass_at_1", float("nan"))
 
 
 def compute_series_dataset(
@@ -143,31 +154,30 @@ def compute_series_dataset(
     """Compute token budget statistics for one (series, dataset) pair and save to disk.
 
     Skips if the output file already exists and update is False.
-    Truncation is inferred structurally (open tag without close tag) rather than
-    from finish_reason, matching the notebook's approach.
+    Reads prompt token counts directly from the inference file (no re-tokenization).
+    Truncation is inferred structurally (open tag without close tag).
     """
     cfg = SERIES[series_key]
-    ds_file, ds_jsonl = DATASETS[dataset_label]
+    ds_file, _ = DATASETS[dataset_label]
+
+    # e.g. "evalplus_greedy_baseline" or "evalplus_greedy_prompt-strict"
     file_stem = f"{ds_file}{cfg['file_suffix']}"
-    out_path = OUTPUT_DIR / series_key / f"{dataset_label}.json"
+    source_path = INFER_DIR / cfg["model_key"] / f"{file_stem}.json"
+    out_path = OUTPUT_DIR / cfg["model_key"] / f"{file_stem}.json"
 
     # skip if output already exists and we are not forcing an update
     if out_path.exists() and not update:
         print(f"  [skip] {series_key}/{dataset_label} (already exists)")
         return
 
-    source_path = INFER_DIR / cfg["model_key"] / f"{file_stem}.json"
     if not source_path.exists():
         print(f"  [skip] {series_key}/{dataset_label} — missing {source_path}")
         return
 
-    # load inference results and original prompts
     with open(source_path) as f:
         data = json.load(f)
 
-    jsonl_path = DATA_DIR / ds_jsonl
-    with open(jsonl_path) as f:
-        prompts = [json.loads(line)["prompt"] for line in f]
+    pass_at_1 = load_pass_at_1(model_key=cfg["model_key"], data=data)
 
     token_counts: list[int] = []
     truncated: list[bool] = []
@@ -193,8 +203,8 @@ def compute_series_dataset(
         # overflow = generation hit the token limit (finish_reason from the model)
         overflow.append(finish_reason == "length")
 
-        # available budget = generation cap minus tokens consumed by the prompt
-        prompt_tokens = len(tokenizer.encode(prompts[task_idx]))
+        # prompt_tokens is pre-computed in the inference file — no re-tokenization needed
+        prompt_tokens = data["token_counts"][task_idx][0]["prompt_tokens"]
         available = MAX_TOKENS - prompt_tokens
 
         if is_truncated:
@@ -204,10 +214,6 @@ def compute_series_dataset(
             pct = min(100.0 * n_tokens / available, 100.0)
         budget_pct.append(pct)
 
-    # pass@1 is pre-computed and stored in the inference result's analysis block
-    pass_at_1: float = data.get("analysis", {}).get("pass_at_1", float("nan"))
-
-    # summary line matching the notebook's output format for easy cross-checking
     n_trunc = sum(truncated)
     n_overflow = sum(overflow)
     print(
