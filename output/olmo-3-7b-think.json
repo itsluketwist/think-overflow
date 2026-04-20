@@ -1993,5 +1993,59 @@
             "mean_prompt_tokens": 3981.0,
             "mean_completion_tokens": 8081.794258373206
         }
+    },
+    "code/codereval_greedy_mt20480_base": {
+        "pass_at_1": 0.0,
+        "pass_at_1_ci": [
+            8.673617379884035e-19,
+            0.009106404172395381
+        ],
+        "pass_at_1_list": [
+            0.0
+        ],
+        "pass_at_k": 0.0,
+        "pass_at_k_ci": [
+            8.673617379884035e-19,
+            0.009106404172395381
+        ],
+        "k": 1,
+        "total": 418,
+        "statistics": {
+            "reasoning_block": 1.0,
+            "reasoning_block_list": [
+                1.0
+            ],
+            "any_reasoning": 1.0,
+            "any_reasoning_list": [
+                1.0
+            ],
+            "valid_reasoning": 1.0,
+            "valid_reasoning_list": [
+                1.0
+            ],
+            "reasoning_truncation_rate": 0.04066985645933014,
+            "reasoning_truncation_rate_list": [
+                0.04066985645933014
+            ],
+            "reasoning_overflow_rate": 0.0,
+            "reasoning_overflow_rate_list": [
+                0.0
+            ],
+            "answer_overflow_rate": 0.007177033492822967,
+            "answer_overflow_rate_list": [
+                0.007177033492822967
+            ],
+            "answer_extracted_rate": 1.0,
+            "answer_extracted_rate_list": [
+                1.0
+            ]
+        },
+        "token_statistics": {
+            "mean_pass1_prompt": 3981.0,
+            "mean_pass1_reasoning": 6766.547846889952,
+            "mean_pass2_prompt": 10747.444976076555,
+            "mean_pass2_answer": 676.6052631578947,
+            "mean_total_generated": 7443.153110047847
+        }
     }
 }
