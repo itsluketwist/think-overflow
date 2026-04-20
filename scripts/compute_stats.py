@@ -37,53 +37,17 @@ SERIES: dict[str, dict] = {
         "olmo_style": False,
         "file_suffix": "_baseline",
     },
-    "qwen3_prompt_strict": {
-        "model_key": "qwen3-8b",
-        "hf_path": "Qwen/Qwen3-8B",
-        "olmo_style": False,
-        "file_suffix": "_prompt-strict",
-    },
-    "qwen3_steer_strict": {
-        "model_key": "qwen3-8b",
-        "hf_path": "Qwen/Qwen3-8B",
-        "olmo_style": False,
-        "file_suffix": "_steer-strict",
-    },
     "olmo_greedy": {
         "model_key": "olmo-3-7b-think",
         "hf_path": "allenai/OLMo-3-7B-Think",
         "olmo_style": True,
         "file_suffix": "_baseline",
     },
-    "olmo_prompt_strict": {
-        "model_key": "olmo-3-7b-think",
-        "hf_path": "allenai/OLMo-3-7B-Think",
-        "olmo_style": True,
-        "file_suffix": "_prompt-strict",
-    },
-    "olmo_steer_strict": {
-        "model_key": "olmo-3-7b-think",
-        "hf_path": "allenai/OLMo-3-7B-Think",
-        "olmo_style": True,
-        "file_suffix": "_steer-strict",
-    },
     "code_nemotron_greedy": {
         "model_key": "code-nemotron-7b",
         "hf_path": "nvidia/OpenCodeReasoning-Nemotron-7B",
         "olmo_style": False,
         "file_suffix": "_baseline",
-    },
-    "code_nemotron_prompt_strict": {
-        "model_key": "code-nemotron-7b",
-        "hf_path": "nvidia/OpenCodeReasoning-Nemotron-7B",
-        "olmo_style": False,
-        "file_suffix": "_prompt-strict",
-    },
-    "code_nemotron_steer_strict": {
-        "model_key": "code-nemotron-7b",
-        "hf_path": "nvidia/OpenCodeReasoning-Nemotron-7B",
-        "olmo_style": False,
-        "file_suffix": "_steer-strict",
     },
 }
 
