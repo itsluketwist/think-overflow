@@ -1,6 +1,36 @@
 # inference config - generation and vllm parameters
 
+baseline:
+  # generation parameters
+  seed: 42
+  temperature: 0.0
+  top_p: 1.0
+  top_k: -1 # disabled for greedy
+  max_tokens: 32768
+  min_tokens: 32
+  samples: 1
+  chunk_size: 512
+
+  # vllm loading parameters (optional - defaults shown)
+  # gpu_memory_utilization: 0.82
+  # max_num_seqs: 32
+
 greedy:
+  # generation parameters
+  seed: 42
+  temperature: 0.0
+  top_p: 1.0
+  top_k: -1 # disabled for greedy
+  max_tokens: 32768
+  min_tokens: 32
+  samples: 1
+  chunk_size: 512
+
+  # vllm loading parameters (optional - defaults shown)
+  # gpu_memory_utilization: 0.82
+  # max_num_seqs: 32
+
+greedx:
   # generation parameters
   seed: 42
   temperature: 0.0
