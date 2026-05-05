@@ -29,3 +29,4 @@ figures/archive/*
 # generated output (inference results, stats)
 output/full_baseline/*
 output/full_transition/*
+output/initial/*

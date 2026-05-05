@@ -1,7 +1,6 @@
 """Evaluation of code responses by executing tests."""
 
 import platform
-import re
 import resource
 import signal
 import subprocess
@@ -9,6 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any
+
+from llm_cgr import Markdown
 
 from src.evaluate.parser import ParsedResponse
 from src.evaluate.statistics import compute_pass_at_1, wilson_ci
@@ -25,13 +26,16 @@ _DEFAULT_MEMORY_MB = 512
 
 def _extract_code(response: str) -> str:
     """Extract code from markdown blocks if present; return the response as-is otherwise."""
-    # match code blocks with optional language specifier
-    pattern = r"```(?:python|py)?\s*\n(.*?)```"
-    matches = re.findall(pattern, response, re.DOTALL | re.IGNORECASE)
-    if matches:
-        # join all code blocks found
-        return "\n\n".join(match.strip() for match in matches)
-    # no code blocks found, return as-is
+    _markdown = Markdown(text=response, default_codeblock_language="python")
+
+    _code = [
+        _cb.text
+        for _cb in _markdown.code_blocks
+        if _cb.language == "python" and _cb.valid
+    ]
+
+    if _code:
+        return max(_code, key=len)
     return response
 
 
@@ -60,17 +64,22 @@ def _execute_code(
     code: str,
     timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
     memory_mb: int = _DEFAULT_MEMORY_MB,
+    python_executable: str | None = None,
 ) -> tuple[bool, str]:
     """Run code in a sandboxed subprocess with time and memory limits.
 
+    Pass python_executable to use a different interpreter (e.g. a venv with
+    extra libraries installed); defaults to the current interpreter.
+
     Returns (success, output/error message).
     """
+    executable = python_executable or sys.executable
     try:
         # run in a temp dir so any files created by the code don't pollute the repo
         # on slurm, $TMPDIR points to fast per-job scratch storage
         with tempfile.TemporaryDirectory() as tmp_dir:
             result = subprocess.run(
-                [sys.executable, "-"],
+                [executable, "-"],
                 input=code,
                 capture_output=True,
                 text=True,
@@ -245,11 +254,14 @@ _OFFICIAL_HARNESS_DATASETS: frozenset[str] = frozenset(
 def _evaluate_response(
     response: str,
     record: dict[str, Any],
+    python_executable: str | None = None,
 ) -> tuple[bool, str | None]:
     """Build and execute test code from a response against a record's test cases.
 
     Routes editbench records (identified by the test_harness field) to a pytest
     runner; all other code benchmarks use inline subprocess execution.
+    Pass python_executable to run tests under a different interpreter (e.g. a
+    dedicated venv with benchmark-specific library versions installed).
 
     Returns (passed, output).
     """
@@ -271,6 +283,7 @@ def _evaluate_response(
     success, output = _execute_code(
         code=test_code,
         timeout_seconds=timeout,
+        python_executable=python_executable,
     )
     return success, output
 
