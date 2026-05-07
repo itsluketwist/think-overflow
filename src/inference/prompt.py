@@ -60,7 +60,6 @@ def prompt_llm(
                 conv,
                 tokenizer=tokenizer,
                 think_prefix=tp,
-                add_generation_reasoning=False,
             )
             for conv, tp in zip(conversations, think_prefixes)
         ]

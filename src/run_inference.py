@@ -504,10 +504,11 @@ def run_inference(
         log(f"Loading tokenizer: {model_cfg['model_path']}")
         tokenizer = AutoTokenizer.from_pretrained(model_cfg["model_path"])
 
-    # onepass and two-pass results are written to separate summary files
+    # summary file goes into the same root as the run (debug has its own subdir)
+    summary_dir = Path(output) / "debug" if debug else Path(output)
     results_suffix = "_onepass" if onepass else "_twopass"
     with json_results(
-        directory=output,
+        directory=summary_dir,
         model=model,
         suffix=results_suffix,
     ) as model_results:
@@ -602,8 +603,8 @@ def run_inference(
                 f"  {dataset_path}: "
                 f"pass@1={analysis['pass_at_1']:.2%}, "
                 f"pass@{analysis['k']}={analysis['pass_at_k']:.2%}, "
-                f"reasoning={stats['any_reasoning']:.1%}, "
-                f"valid={stats['valid_reasoning']:.1%}",
+                f"valid_reasoning={stats['valid_reasoning_rate']:.1%}, "
+                f"missing={stats['missing_reasoning_rate']:.1%}",
             )
     log()
     log("Done.")

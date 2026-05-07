@@ -87,6 +87,12 @@ todo
 We use a few extra processes to ensure the code maintains a high quality.
 First clone the project and create a virtual environment - as described above.
 
+To update the frozen requirements after changing `requirements.txt`:
+
+```shell
+uv pip freeze > requirements.frozen
+```
+
 ### *tests*
 
 This project includes unit tests to ensure correct functionality.
