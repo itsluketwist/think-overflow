@@ -54,12 +54,16 @@ def prompt_llm(
     # build chat-formatted prompt strings via thinkpack
     conversations = [[{"role": "user", "content": p}] for p in prompts]
     if think_prefixes is not None:
-        # pass 2: inject reasoning and close the block so model generates the answer
+        # pass 2: inject reasoning then close the block so model generates only the answer.
+        # response_prefix="" is what triggers thinkpack to add the close tag — without it the
+        # block stays open and the model generates its own </think>, producing a duplicate.
+        # (add_generation_reasoning=False cannot be combined with think_prefix; thinkpack errors)
         texts = [
             thinkpack.apply_chat_template(
                 conv,
                 tokenizer=tokenizer,
                 think_prefix=tp,
+                response_prefix="",
             )
             for conv, tp in zip(conversations, think_prefixes)
         ]
