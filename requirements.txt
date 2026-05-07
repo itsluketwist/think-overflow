@@ -8,6 +8,7 @@ math-verify
 pyyaml
 requests
 setuptools
+thinkpack
 torch
 tqdm
 transformers<5.0.0

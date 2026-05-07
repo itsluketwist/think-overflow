@@ -4,8 +4,8 @@ import re
 from typing import Any
 
 from math_verify import ExprExtractionConfig, LatexExtractionConfig, parse, verify
+from thinkpack import ParsedResponse
 
-from src.evaluate.parser import ParsedResponse
 from src.evaluate.statistics import compute_pass_at_1, wilson_ci
 
 

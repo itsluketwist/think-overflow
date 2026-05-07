@@ -3,7 +3,8 @@
 import re
 from typing import Any
 
-from src.evaluate.parser import ParsedResponse
+from thinkpack import ParsedResponse
+
 from src.evaluate.statistics import compute_pass_at_1, wilson_ci
 
 

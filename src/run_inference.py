@@ -11,14 +11,13 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+import thinkpack
 from llm_cgr import load_json, save_json
+from transformers import AutoTokenizer
 from vllm import LLM
 
 from src.evaluate import evaluate
-from src.evaluate.statistics import (
-    aggregate_baseline_token_counts,
-    aggregate_token_counts,
-)
+from src.evaluate.statistics import aggregate_token_counts
 from src.inference.data import (
     construct_inference_prompts,
     load_dataset_records,
@@ -43,65 +42,36 @@ _OVERFLOW_SUFFIXES: dict[str, str] = {
 }
 
 
-def _build_pass2_prefix(
-    response: str,
-    olmo_style: bool,
-    overflow_suffix: str,
-    truncated: bool,
-) -> str:
-    """Construct the full <think>...</think> prefix for Pass 2.
-
-    Reconstructs a canonical thinking block from the Pass 1 response.
-    OLMo models emit raw content (template injects the opening tag), so we
-    add it back explicitly. For non-OLMo models the response should already
-    start with <think>, but we wrap it if not to handle edge cases.
-    The overflow_suffix is appended only when the reasoning was truncated.
-
-    Returns a string of the form '<think>\\n{reasoning}{suffix}\\n</think>\\n'.
-    """
-    if olmo_style or not response.startswith("<think>"):
-        # olmo: template injects <think>, response is raw content
-        # non-olmo edge case: model didn't emit the tag, wrap manually
-        block = "<think>\n" + response
-    else:
-        # non-olmo: response already starts with <think>
-        block = response
-
-    # append the overflow suffix only if reasoning was cut short by the token cap
-    suffix = overflow_suffix if truncated else ""
-    return block + suffix + "\n</think>\n"
-
-
-def _run_single_pass(
+def _run_onepass(
     llm: LLM,
+    tokenizer: Any,
     prompts: list[str],
     samples: int,
     seed: int,
-    temperature: float,
-    top_p: float,
-    top_k: int,
+    temperature: float | None,
+    top_p: float | None,
+    top_k: int | None,
     max_tokens: int,
     chunk_size: int,
-) -> tuple[
-    list[list[list[Any]]],  # packed_responses[task][sample] = [text, finish_reason]
-    list[list[dict]],  # token_counts[task][sample] = {prompt_tokens, completion_tokens}
-]:
-    """Run single-pass standard inference over a list of prompts.
+) -> list[list[dict]]:
+    """Run single-pass unconstrained inference over a list of prompts.
 
-    Collects prompt and completion token counts for each sample in the same
-    [task][sample] shape as _run_two_pass so the rest of the pipeline is unchanged.
-
-    Returns (packed_responses, token_counts).
+    Returns details: a [task][sample] list of dicts with keys:
+    text, stop_reason, truncated, transition, prompt_tokens_1, completion_tokens_1,
+    prompt_tokens_2, completion_tokens_2. Pass 2 keys are None for onepass.
+    transition is always False for onepass (no forced cap).
+    truncated is True when stop_reason is "length" (hit the token limit).
     """
     n_prompts = len(prompts)
 
-    log("    Generating responses (single pass)...")
+    log("    Generating responses (onepass)...")
     with log_timer("generation"):
-        responses, finish_reasons, prompt_toks, completion_toks = prompt_llm(
+        responses, stop_reasons, prompt_toks, completion_toks = prompt_llm(
             llm=llm,
+            tokenizer=tokenizer,
             prompts=prompts,
             samples=samples,
-            prefixes=None,
+            think_prefixes=None,
             seed=seed,
             temperature=temperature,
             top_p=top_p,
@@ -112,58 +82,60 @@ def _run_single_pass(
             chunk_size=chunk_size,
         )
 
-    packed_responses: list[list[list[Any]]] = []
-    token_counts: list[list[dict]] = []
-
+    details: list[list[dict]] = []
     for i in range(n_prompts):
-        task_responses: list[list[Any]] = []
-        task_tokens: list[dict] = []
-
+        task_details: list[dict] = []
         for j in range(samples):
-            task_responses.append([responses[i][j], finish_reasons[i][j]])
-            task_tokens.append(
+            stop_reason = stop_reasons[i][j]
+            task_details.append(
                 {
-                    "prompt_tokens": prompt_toks[i],
-                    "completion_tokens": completion_toks[i][j],
+                    "text": responses[i][j],
+                    "stop_reason": stop_reason,
+                    "truncated": stop_reason == "length",  # hit model token limit
+                    "transition": False,  # no forced cap in onepass
+                    "prompt_tokens_1": prompt_toks[i],
+                    "completion_tokens_1": completion_toks[i][j],
+                    "prompt_tokens_2": None,
+                    "completion_tokens_2": None,
                 },
             )
+        details.append(task_details)
 
-        packed_responses.append(task_responses)
-        token_counts.append(task_tokens)
-
-    return packed_responses, token_counts
+    return details
 
 
-def _run_two_pass(
+def _run_twopass(
     llm: LLM,
     prompts: list[str],
-    olmo_style: bool,
+    tokenizer: Any,
     max_think_tokens: int,
     overflow_suffix: str,
     answer_tokens: int,
     samples: int,
     seed: int,
-    temperature: float,
-    top_p: float,
-    top_k: int,
+    temperature: float | None,
+    top_p: float | None,
+    top_k: int | None,
     chunk_size: int,
-) -> tuple[
-    list[list[list[Any]]],  # packed_responses[task][sample] = [text, finish_reason]
-    list[list[bool]],  # truncated[task][sample]
-    list[list[dict]],  # token_counts[task][sample] = {pass1_prompt, ...}
-]:
+) -> list[list[dict]]:
     """Run two-pass capped reasoning inference over a list of prompts.
 
-    Pass 1 generates reasoning up to max_think_tokens (stopping at </think>
-    if the model closes its thinking naturally before the cap). Truncated
-    samples get overflow_suffix appended before closing </think>. Pass 2
-    generates the answer given the full reasoning context.
+    Pass 1 generates reasoning up to max_think_tokens (stopping at the close tag
+    if the model closes its thinking naturally before the cap). Samples that hit
+    the cap trigger a transition: overflow_suffix is appended and the reasoning
+    block is closed before pass 2 generates the answer.
 
-    Returns (packed_responses, truncated_flags, token_counts).
+    Returns details: a [task][sample] list of dicts with keys:
+    text, stop_reason, truncated, transition, prompt_tokens_1, completion_tokens_1,
+    prompt_tokens_2, completion_tokens_2.
+    transition=True means the reasoning was forcibly capped (pass 1 hit max_think_tokens).
+    truncated=True means pass 2 answer generation hit the token limit.
     """
     n_prompts = len(prompts)
+    # get model tag info once for stop condition and response reconstruction
+    model_info = thinkpack.get_model_info(tokenizer)
 
-    # --- pass 1: generate reasoning, stopping at </think> or max_think_tokens ---
+    # --- pass 1: generate reasoning, stopping at close tag or max_think_tokens ---
     log("    Pass 1: generating capped reasoning...")
     with log_timer("pass 1"):
         (
@@ -173,54 +145,50 @@ def _run_two_pass(
             p1_reason_toks,
         ) = prompt_llm(
             llm=llm,
+            tokenizer=tokenizer,
             prompts=prompts,
             samples=samples,
-            prefixes=None,
+            think_prefixes=None,
             seed=seed,
             temperature=temperature,
             top_p=top_p,
             top_k=top_k,
             max_tokens=max_think_tokens,
             min_tokens=1,
-            stop=["</think>"],
+            stop=[model_info.close_tag],
             chunk_size=chunk_size,
         )
 
-    # count how many reasoning traces were cut short by the token cap
-    truncation_count = sum(
+    # count how many reasoning traces were cut short and triggered a transition
+    transition_count = sum(
         1
         for task_reasons in step1_reasons
         for reason in task_reasons
         if reason == "length"
     )
     log(
-        f"    Truncated: {truncation_count}/{n_prompts * samples} "
-        f"({truncation_count / max(n_prompts * samples, 1):.1%})",
+        f"    Transition: {transition_count}/{n_prompts * samples} "
+        f"({transition_count / max(n_prompts * samples, 1):.1%})",
     )
 
-    # --- build pass 2 prefixes: one per (prompt, sample) pair ---
+    # --- build pass 2 think_prefixes: one per (prompt, sample) pair ---
     # flattened in row-major order: all samples for prompt 0, then prompt 1, ...
-    all_prefixes_flat: list[str] = []
-    all_truncated_flat: list[bool] = []
+    # think_prefix is the raw reasoning content; thinkpack injects it as a completed
+    # <think>...</think> block in the pass 2 prompt via apply_chat_template
+    all_think_prefixes_flat: list[str] = []
+    all_transition_flat: list[bool] = []
 
     for step1_task_responses, step1_task_reasons in zip(step1_responses, step1_reasons):
         for response, reason in zip(step1_task_responses, step1_task_reasons):
-            truncated = reason == "length"
-            prefix = _build_pass2_prefix(
-                response=response,
-                olmo_style=olmo_style,
-                overflow_suffix=overflow_suffix,
-                truncated=truncated,
-            )
-            all_prefixes_flat.append(prefix)
-            all_truncated_flat.append(truncated)
+            transition = bool(reason == "length")
+            think_prefix = response + (overflow_suffix if transition else "")
+            all_think_prefixes_flat.append(think_prefix)
+            all_transition_flat.append(transition)
 
     # expand prompts to match flattened (prompt × sample) pairs
     flat_prompts = [p for p in prompts for _ in range(samples)]
 
-    # --- pass 2: generate answers given the complete reasoning context ---
-    # prompt_llm prepends each prefix to the stored response, so the output is
-    # "<think>\n{reasoning}\n</think>\n{answer}" — compatible with evaluate()
+    # --- pass 2: generate answers given the completed reasoning block ---
     log("    Pass 2: generating answers from reasoning...")
     with log_timer("pass 2"):
         (
@@ -230,9 +198,10 @@ def _run_two_pass(
             p2_answer_toks,
         ) = prompt_llm(
             llm=llm,
+            tokenizer=tokenizer,
             prompts=flat_prompts,
             samples=1,
-            prefixes=all_prefixes_flat,
+            think_prefixes=all_think_prefixes_flat,
             seed=seed,
             temperature=temperature,
             top_p=top_p,
@@ -244,45 +213,40 @@ def _run_two_pass(
         )
 
     # --- reshape results from flat [n_prompts*samples] back to [task][sample] ---
-    packed_responses: list[list[list[Any]]] = []
-    truncated_flags: list[list[bool]] = []
-    token_counts: list[list[dict]] = []
+    details: list[list[dict]] = []
 
     for i in range(n_prompts):
-        task_responses: list[list[Any]] = []
-        task_truncated: list[bool] = []
-        task_tokens: list[dict] = []
+        task_details: list[dict] = []
 
         for j in range(samples):
             # flat index for this (prompt i, sample j) pair
             k = i * samples + j
 
-            # step2_responses[k] is a 1-element list (samples=1 in pass 2)
-            full_response = step2_responses[k][0]
-            finish_reason = step2_reasons[k][0]
+            answer = step2_responses[k][0]
+            stop_reason = step2_reasons[k][0]
+            think_prefix = all_think_prefixes_flat[k]
 
-            task_responses.append([full_response, finish_reason])
-            task_truncated.append(all_truncated_flat[k])
-            task_tokens.append(
+            # reconstruct the full <think>...</think>answer for storage and evaluation
+            full_text = f"{model_info.open_tag}\n{think_prefix}\n{model_info.close_tag}\n{answer}"
+
+            task_details.append(
                 {
-                    # tokens in the original prompt (without reasoning)
-                    "pass1_prompt": p1_prompt_toks[i],
-                    # reasoning tokens generated in pass 1 (output cost)
-                    "pass1_reasoning": p1_reason_toks[i][j],
-                    # prompt + reasoning prefix input to pass 2
-                    "pass2_prompt": p2_prompt_toks[k],
-                    # answer tokens generated in pass 2 (output cost)
-                    "pass2_answer": p2_answer_toks[k][0],
-                    # total tokens generated across both passes (effective cost)
-                    "total_generated": p1_reason_toks[i][j] + p2_answer_toks[k][0],
+                    "text": full_text,
+                    "stop_reason": stop_reason,
+                    "truncated": stop_reason == "length",  # answer generation hit limit
+                    "transition": all_transition_flat[
+                        k
+                    ],  # reasoning was forcibly capped
+                    "prompt_tokens_1": p1_prompt_toks[i],
+                    "completion_tokens_1": p1_reason_toks[i][j],
+                    "prompt_tokens_2": p2_prompt_toks[k],
+                    "completion_tokens_2": p2_answer_toks[k][0],
                 },
             )
 
-        packed_responses.append(task_responses)
-        truncated_flags.append(task_truncated)
-        token_counts.append(task_tokens)
+        details.append(task_details)
 
-    return packed_responses, truncated_flags, token_counts
+    return details
 
 
 def run_inference(
@@ -293,32 +257,33 @@ def run_inference(
     output: str,
     datasets: str,
     eval_type: str | None,
-    baseline: bool,
+    onepass: bool,
     max_think_tokens: int | None,
     overflow_suffix: str,
     run_name: str | None,
     update: bool,
+    debug: bool = False,
 ) -> None:
-    """Run two-pass or single-pass inference with explicit configuration arguments.
+    """Run two-pass or onepass inference with explicit configuration arguments.
 
     The overflow_suffix argument is a key from _OVERFLOW_SUFFIXES (e.g. 'formal'),
-    not the resolved string. Mutually exclusive: either baseline=True or
+    not the resolved string. Mutually exclusive: either onepass=True or
     max_think_tokens must be set.
     """
     # resolve suffix key to the actual string appended to truncated reasoning
     overflow_suffix_str: str = _OVERFLOW_SUFFIXES[overflow_suffix]
 
-    # default run name encodes the mode: "baseline" or "mt{cap}_{suffix}"
-    if baseline:
-        run_name = run_name or "baseline"
+    # default run name encodes the mode: "onepass" or "mt{cap}_{suffix}"
+    if onepass:
+        run_name = run_name or "onepass"
     else:
         run_name = run_name or f"mt{max_think_tokens}_{overflow_suffix}"
 
     log_header("INFERENCE")
     log(f"Model: {model}")
     log(f"Config: {config_file} [{config_profile}]")
-    log(f"Mode: {'baseline (single-pass)' if baseline else 'two-pass overflow'}")
-    if not baseline:
+    log(f"Mode: {'onepass (unconstrained)' if onepass else 'two-pass overflow'}")
+    if not onepass:
         log(f"Max think tokens: {max_think_tokens}")
         log(f"Overflow suffix: {overflow_suffix} ({repr(overflow_suffix_str)})")
     log(f"Run name: {run_name}")
@@ -336,29 +301,54 @@ def run_inference(
         key=model,
     )
 
-    # olmo_style flag: olmo models inject the opening <think> tag in their chat template,
-    # so reasoning responses are raw content rather than wrapped in <think>...</think>
-    olmo_style: bool = model_cfg.get("olmo_style", False)
-    # pass 2 uses the full max_tokens from the config (typically 32k)
+    # pass 2 answer budget: max_tokens from the config (28672 for greedy/default, 32768 for greedymax)
     answer_tokens: int = inference_config.get("max_tokens", 32768)
     samples: int = inference_config.get("samples", 1)
 
-    log(f"OLMo style: {olmo_style}")
+    # sampling param resolution: inference config takes priority; when null (e.g. "default"
+    # profile), fall back to per-model defaults from models.yaml; None if neither is set
+    # (prompt_llm then uses vLLM's own defaults: temperature=1.0, top_p=1.0, top_k=-1)
+    model_defaults = model_cfg.get("defaults", {})
+    temperature: float | None = inference_config.get("temperature")
+    if temperature is None:
+        temperature = model_defaults.get("temperature")
+    top_p: float | None = inference_config.get("top_p")
+    if top_p is None:
+        top_p = model_defaults.get("top_p")
+    top_k: int | None = inference_config.get("top_k")
+    if top_k is None:
+        top_k = model_defaults.get("top_k")
+
     log(f"Answer tokens (pass 2 max): {answer_tokens}")
     log(f"Samples: {samples}")
-    log(f"Temperature: {inference_config.get('temperature', 0.0)}")
-    log(f"Top-p: {inference_config.get('top_p', 1.0)}")
-    log(f"Top-k: {inference_config.get('top_k', -1)}")
+    log(f"Temperature: {temperature if temperature is not None else 'default (1.0)'}")
+    log(f"Top-p: {top_p if top_p is not None else 'default (1.0)'}")
+    log(f"Top-k: {top_k if top_k is not None else 'default (-1)'}")
 
-    # baseline results and two-pass results are kept in separate directories
-    # so they can be compared without ambiguity
-    output_subdir = "full_baseline" if baseline else "full_transition"
-    output_dir = Path(output) / output_subdir / model
+    if debug:
+        # debug runs go to a fixed directory so they never pollute real results
+        output_dir = Path(output) / "debug" / model
+    else:
+        # onepass and two-pass results are kept in separate directories
+        output_subdir = "onepass" if onepass else "twopass"
+        output_dir = Path(output) / output_subdir / model
     output_dir.mkdir(parents=True, exist_ok=True)
     log(f"Output directory: {output_dir}")
 
     # parse all dataset entries and determine which need generation
     dataset_entries = [parse_dataset_entry(d) for d in datasets.split(",") if d]
+
+    if debug:
+        # keep only the first dataset of each eval type for a quick smoke test
+        seen_types: set[str | None] = set()
+        debug_entries = []
+        for entry in dataset_entries:
+            t = entry[1]
+            if t not in seen_types:
+                seen_types.add(t)
+                debug_entries.append(entry)
+        dataset_entries = debug_entries
+        log("Debug mode: one dataset per type, 5 samples each")
     all_datasets: list[tuple[str, Path, str | None]] = []
     datasets_to_generate: list[tuple[str, Path, str | None]] = []
 
@@ -379,6 +369,10 @@ def run_inference(
         status = "generate" if needs_generation else "exists"
         log(f"  - {dataset_path} (type={resolved_eval_type}, {status})")
 
+    # tokenizer is obtained from the loaded LLM during phase 1; if phase 1 is
+    # skipped it is loaded via AutoTokenizer for use in evaluation
+    tokenizer = None
+
     # --- phase 1: generation ---
     if datasets_to_generate:
         log_header(f"PHASE 1: GENERATION ({len(datasets_to_generate)} datasets)")
@@ -391,6 +385,9 @@ def run_inference(
             max_num_seqs=inference_config.get("max_num_seqs"),
         )
         log("Model loaded successfully.")
+        tokenizer = llm.get_tokenizer()
+        mi = thinkpack.get_model_info(tokenizer)
+        log(f"Model info: prefixed={mi.prefixed}, tag={mi.tag_content}")
         log()
 
         for i, (dataset_path, file_path, resolved_eval_type) in enumerate(
@@ -406,6 +403,8 @@ def run_inference(
                 split="test",
                 required_keys={"prompt"},
             )
+            if debug:
+                dataset = dataset[:5]
             log(f"    Loaded {len(dataset)} prompts")
 
             prompts = construct_inference_prompts(
@@ -414,15 +413,16 @@ def run_inference(
             )
 
             output_data: dict[str, Any]
-            if baseline:
-                packed_responses, token_counts = _run_single_pass(
+            if onepass:
+                details = _run_onepass(
                     llm=llm,
+                    tokenizer=tokenizer,
                     prompts=prompts,
                     samples=samples,
                     seed=inference_config.get("seed", 42),
-                    temperature=inference_config.get("temperature", 0.0),
-                    top_p=inference_config.get("top_p", 1.0),
-                    top_k=inference_config.get("top_k", -1),
+                    temperature=temperature,
+                    top_p=top_p,
+                    top_k=top_k,
                     max_tokens=answer_tokens,
                     chunk_size=inference_config.get("chunk_size", 512),
                 )
@@ -435,36 +435,36 @@ def run_inference(
                         "eval_type": resolved_eval_type,
                         "samples": samples,
                         "run_name": run_name,
-                        "olmo_style": olmo_style,
-                        "baseline": True,
+                        "onepass": True,
                     },
                     "analysis": None,
                     "evaluation": None,
-                    "responses": packed_responses,
-                    "token_counts": token_counts,
+                    "details": details,
                 }
                 save_json(data=output_data, file_path=str(file_path))
                 log(f"    Saved to {file_path}")
 
             else:
-                packed_responses, truncated_flags, token_counts = _run_two_pass(
+                details = _run_twopass(
                     llm=llm,
+                    tokenizer=tokenizer,
                     prompts=prompts,
-                    olmo_style=olmo_style,
                     max_think_tokens=max_think_tokens,  # type: ignore[arg-type]
                     overflow_suffix=overflow_suffix_str,
                     answer_tokens=answer_tokens,
                     samples=samples,
                     seed=inference_config.get("seed", 42),
-                    temperature=inference_config.get("temperature", 0.0),
-                    top_p=inference_config.get("top_p", 1.0),
-                    top_k=inference_config.get("top_k", -1),
+                    temperature=temperature,
+                    top_p=top_p,
+                    top_k=top_k,
                     chunk_size=inference_config.get("chunk_size", 512),
                 )
 
-                # compute truncation stats for metadata
-                n_total = sum(len(task) for task in truncated_flags)
-                n_truncated = sum(1 for task in truncated_flags for t in task if t)
+                # compute transition stats for metadata
+                n_total = sum(len(task) for task in details)
+                n_transition = sum(
+                    1 for task in details for s in task if s["transition"]
+                )
 
                 output_data = {
                     "metadata": {
@@ -479,20 +479,17 @@ def run_inference(
                         "overflow_suffix": overflow_suffix_str,
                         "answer_tokens": answer_tokens,
                         "run_name": run_name,
-                        "olmo_style": olmo_style,
-                        "truncation_count": n_truncated,
-                        "truncation_rate": n_truncated / max(n_total, 1),
+                        "transition_count": n_transition,
+                        "transition_rate": n_transition / max(n_total, 1),
                     },
                     "analysis": None,
                     "evaluation": None,
-                    "responses": packed_responses,
-                    "truncated": truncated_flags,
-                    "token_counts": token_counts,
+                    "details": details,
                 }
                 save_json(data=output_data, file_path=str(file_path))
                 log(
                     f"    Saved to {file_path} "
-                    f"(truncation: {n_truncated}/{n_total} = {n_truncated / max(n_total, 1):.1%})",
+                    f"(transition: {n_transition}/{n_total} = {n_transition / max(n_total, 1):.1%})",
                 )
 
     else:
@@ -502,9 +499,17 @@ def run_inference(
     # --- phase 2: evaluate all datasets ---
     log_header(f"PHASE 2: EVALUATION ({len(all_datasets)} datasets)")
 
+    # load tokenizer for evaluation if phase 1 was skipped (no weights, just config)
+    if tokenizer is None:
+        log(f"Loading tokenizer: {model_cfg['model_path']}")
+        tokenizer = AutoTokenizer.from_pretrained(model_cfg["model_path"])
+
+    # onepass and two-pass results are written to separate summary files
+    results_suffix = "_onepass" if onepass else "_twopass"
     with json_results(
         directory=output,
         model=model,
+        suffix=results_suffix,
     ) as model_results:
         eval_results: list[tuple[str, dict]] = []
 
@@ -516,13 +521,17 @@ def run_inference(
 
             try:
                 data = load_json(file_path=str(file_path))
-                raw_responses = data["responses"]
 
-                # unpack [text, finish_reason] pairs stored per sample
-                responses = [[entry[0] for entry in task] for task in raw_responses]
-                finish_reasons = [
-                    [entry[1] for entry in task] for task in raw_responses
-                ]
+                # support both the new unified "details" format and legacy separate keys
+                eval_details: list[list[dict]] | None
+                if "details" in data:
+                    eval_details = data["details"]
+                    responses = [[s["text"] for s in task] for task in eval_details]
+                else:
+                    # legacy format: responses=[text, finish_reason]
+                    raw = data["responses"]
+                    responses = [[entry[0] for entry in task] for task in raw]
+                    eval_details = None
 
                 dataset = load_dataset_records(
                     dataset=dataset_path,
@@ -530,26 +539,20 @@ def run_inference(
                     split="test",
                     required_keys={"prompt"},
                 )
+                if debug:
+                    dataset = dataset[:5]
 
-                is_two_pass = not data["metadata"].get("baseline", False)
                 analysis = None
                 breakdown = None
                 if resolved_eval_type is not None:
                     log(f"    Evaluating {len(responses)} responses...")
-                    # two-pass: stored truncated_flags are pass 1 cap-hit booleans
-                    # baseline: derive equivalent from finish_reasons (True = any overflow)
-                    eval_truncated_flags: list[list[bool]] = data.get("truncated") or [
-                        [r == "length" for r in task] for task in finish_reasons
-                    ]
                     with log_timer("evaluation"):
                         analysis, breakdown = evaluate(
                             responses=responses,
                             records=dataset,
                             eval_type=resolved_eval_type,
-                            olmo_style=olmo_style,
-                            finish_reasons=finish_reasons,
-                            truncated_flags=eval_truncated_flags,
-                            two_pass=is_two_pass,
+                            tokenizer=tokenizer,
+                            details=eval_details,
                             dataset_name=Path(dataset_path).stem,
                         )
 
@@ -561,15 +564,9 @@ def run_inference(
                     eval_results.append((dataset_path, analysis))
 
                     dataset_key = f"{dataset_path}_{config_profile}_{run_name}"
-                    # use the appropriate aggregator depending on the run mode
-                    if not is_two_pass:
-                        token_stats = aggregate_baseline_token_counts(
-                            token_counts=data["token_counts"],
-                        )
-                    else:
-                        token_stats = aggregate_token_counts(
-                            token_counts=data["token_counts"],
-                        )
+                    token_stats = aggregate_token_counts(
+                        details=eval_details or data.get("token_counts", []),
+                    )
                     model_results[dataset_key] = {
                         **analysis,
                         "token_statistics": token_stats,
@@ -591,7 +588,10 @@ def run_inference(
     # --- summary ---
     log_header("SUMMARY")
     log(f"Model: {model}")
-    log(f"Run: {run_name} (max_think_tokens={max_think_tokens})")
+    mode_str = (
+        "onepass" if onepass else f"twopass (max_think_tokens={max_think_tokens})"
+    )
+    log(f"Run: {run_name} ({mode_str})")
     log(f"Datasets evaluated: {len(eval_results)}/{len(all_datasets)}")
     log()
     if eval_results:

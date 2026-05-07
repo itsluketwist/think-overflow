@@ -45,22 +45,34 @@ pip install -e .
 
 ## *usage*
 
-After [*installation*](#installation), there are 2 ways to run the experiment code.
-The easiest of which is via the the [`main.ipynb`](main.ipynb) notebook, which fully describes
-each experiment and provides the methods to run them.
+After [*installation*](#installation), use the `run` CLI to run inference. Two modes are available:
 
-You can also use the `run` command from your terminal - this is likely best if you want to
-reproduce the experiments on an external server or in a [docker](https://www.docker.com/)
-container.
+- **`--onepass`** — single-pass unconstrained inference (baseline)
+- **`--max-think-tokens N`** — two-pass think-overflow inference with a reasoning cap
 
 ```shell
-run --dataset-file data/example.json
+# onepass baseline — full budget, greedy decoding
+run -m qwen3-8b -cp greedymax -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --onepass
+
+# two-pass think-overflow — 4096 reasoning token cap, greedy decoding
+run -m qwen3-8b -cp greedy -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --max-think-tokens 4096 --overflow-suffix formal
 ```
 
-All other non-experiment code that likely only needed to be ran a single time is explained in,
-and can be interfaced with, via it's corresponding Jupyter notebook.
-These notebooks are contained in the [`notebooks/`](notebooks/) directory, and are described in the
-[*structure*](#structure) section.
+HPC job submission is handled via [`scripts/submit_job.sh`](scripts/submit_job.sh) — configure the
+model list, datasets, and token caps there, then run the script to dispatch Slurm jobs.
+
+### *debug*
+
+Use `--debug` to smoke-test a run locally: it picks one dataset per eval type, limits each to
+5 samples, and writes output to `output/debug/` instead of the normal results directories.
+
+```shell
+# debug onepass — model-default sampling, 3 samples per task
+run -m qwen3-1.7b -cp default -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --onepass --debug
+
+# debug two-pass — greedy, 4096 token reasoning cap
+run -m qwen3-1.7b -cp greedy -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --max-think-tokens 4096 --overflow-suffix formal --debug
+```
 
 ## *structure*
 

@@ -2,10 +2,12 @@
 
 from typing import Any, Callable
 
+import thinkpack
+from thinkpack import ParsedResponse
+
 from src.evaluate.code import evaluate_code
 from src.evaluate.cruxeval import evaluate_cruxeval
 from src.evaluate.math import evaluate_math
-from src.evaluate.parser import ParsedResponse, parse_responses
 from src.evaluate.reasoning import evaluate_reasoning
 from src.evaluate.statistics import compute_reasoning_statistics
 
@@ -26,20 +28,16 @@ def evaluate(
     responses: list[list[str]],
     records: list[dict[str, Any]],
     eval_type: str,
-    olmo_style: bool = False,
-    finish_reasons: list[list[str]] | None = None,
-    truncated_flags: list[list[bool]] | None = None,
-    two_pass: bool = False,
+    tokenizer: Any | None = None,
+    details: list[list[dict]] | None = None,
     dataset_name: str | None = None,
 ) -> tuple[dict, list[dict]]:
     """Evaluate model responses against ground truth, dispatching on eval_type.
 
     eval_type options: math (\\boxed{} extraction), reasoning (letter choice), code (execution), crux.
-    Set olmo_style=True for models whose chat template injects the opening reasoning tag.
-    Pass finish_reasons ([task][sample], "stop"/"length") for accurate overflow tracking.
-    Pass truncated_flags ([task][sample] booleans) for overflow rate computation —
-    two-pass: pass 1 cap-hit flags; baseline: finish_reason=="length" flags.
-    Set two_pass=True to use two-pass overflow logic (see compute_reasoning_statistics).
+    Pass tokenizer so thinkpack auto-detects the model's reasoning tag style.
+    Pass details ([task][sample] dicts) for transition and overflow rate computation;
+    the details structure is self-describing (transition=False for onepass samples).
     Pass dataset_name (file stem) so evaluators can apply dataset-specific behaviour
     (e.g. skipping test execution for benchmarks with official harnesses).
 
@@ -51,16 +49,13 @@ def evaluate(
             f"unknown evaluation type '{eval_type}'. supported types: {supported}",
         )
 
-    # parse each response once — splits reasoning from answer, computes reasoning flags;
-    # finish_reasons is passed here so is_overflow is set on each ParsedResponse directly
-    parsed: list[list[ParsedResponse]] = parse_responses(
-        responses,
-        olmo_style=olmo_style,
-        finish_reasons=finish_reasons,
+    # parse responses — thinkpack handles nested list[list[str]] and detects tag style
+    parsed: list[list[ParsedResponse]] = thinkpack.parse(
+        response=responses,
+        tokenizer=tokenizer,
     )
 
-    # run the type-specific evaluator — passes ParsedResponse objects so evaluators
-    # can inspect both the answer section and the reasoning content separately
+    # run the type-specific evaluator
     evaluator = _EVALUATORS[eval_type]
     result, breakdown = evaluator(
         responses=parsed,
@@ -68,12 +63,12 @@ def evaluate(
         dataset_name=dataset_name,
     )
 
-    # compute reasoning statistics over all parsed responses
+    # compute reasoning statistics, blending thinkpack reliability metrics with
+    # our custom transition/overflow rates derived from the details structure
     result["statistics"] = compute_reasoning_statistics(
         parsed_responses=parsed,
+        details=details,
         results_breakdown=breakdown,
-        truncated_flags=truncated_flags,
-        two_pass=two_pass,
     )
 
     return result, breakdown

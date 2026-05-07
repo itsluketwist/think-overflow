@@ -26,6 +26,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-cf",
     "--config-file",
     type=str,
     default="config/inference.yaml",
@@ -33,9 +34,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-cp",
     "--config-profile",
     type=str,
-    default="greedy",
+    default="greedymax",
     help="Config profile name within the config file.",
 )
 
@@ -64,11 +66,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--baseline",
+    "--onepass",
     action="store_true",
     default=False,
+    dest="onepass",
     help=(
-        "Run single-pass baseline inference instead of two-pass inference. "
+        "Run onepass unconstrained inference instead of two-pass inference. "
         "Mutually exclusive with --max-think-tokens."
     ),
 )
@@ -108,16 +111,26 @@ parser.add_argument(
     help="Force regeneration of responses even if the output file already exists.",
 )
 
+parser.add_argument(
+    "--debug",
+    action="store_true",
+    default=False,
+    help=(
+        "Debug mode: limit to the first 5 samples from one dataset per eval type, "
+        "and save all output to output/debug/."
+    ),
+)
+
 
 def main() -> None:
     """Parse and validate CLI args, then dispatch to run_inference."""
     args = parser.parse_args()
 
-    # validate: exactly one of --baseline or --max-think-tokens must be provided
-    if args.baseline and args.max_think_tokens is not None:
-        parser.error("--baseline and --max-think-tokens are mutually exclusive.")
-    if not args.baseline and args.max_think_tokens is None:
-        parser.error("one of --baseline or --max-think-tokens is required.")
+    # validate: exactly one of --onepass or --max-think-tokens must be provided
+    if args.onepass and args.max_think_tokens is not None:
+        parser.error("--onepass and --max-think-tokens are mutually exclusive.")
+    if not args.onepass and args.max_think_tokens is None:
+        parser.error("one of --onepass or --max-think-tokens is required.")
 
     run_inference(
         model=args.model,
@@ -127,9 +140,10 @@ def main() -> None:
         output=args.output,
         datasets=args.datasets,
         eval_type=args.type,
-        baseline=args.baseline,
+        onepass=args.onepass,
         max_think_tokens=args.max_think_tokens,
         overflow_suffix=args.overflow_suffix,
         run_name=args.run_name,
+        debug=args.debug,
         update=args.update,
     )

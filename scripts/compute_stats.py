@@ -14,12 +14,11 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import thinkpack
 from transformers import AutoTokenizer
 
 
-# add src to the path so we can import the response parser
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from evaluate.parser import parse_response
 
 
 # ---------------------------------------------------------------------------
@@ -34,19 +33,21 @@ SERIES: dict[str, dict] = {
     "qwen3_greedy": {
         "model_key": "qwen3-8b",
         "hf_path": "Qwen/Qwen3-8B",
-        "olmo_style": False,
         "file_suffix": "_baseline",
     },
     "olmo_greedy": {
         "model_key": "olmo-3-7b-think",
         "hf_path": "allenai/OLMo-3-7B-Think",
-        "olmo_style": True,
         "file_suffix": "_baseline",
     },
     "code_nemotron_greedy": {
         "model_key": "code-nemotron-7b",
         "hf_path": "nvidia/OpenCodeReasoning-Nemotron-7B",
-        "olmo_style": False,
+        "file_suffix": "_baseline",
+    },
+    "deepseek_r1_greedy": {
+        "model_key": "deepseek-r1-8b",
+        "hf_path": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
         "file_suffix": "_baseline",
     },
 }
@@ -73,9 +74,9 @@ MAX_TOKENS: int = 32768
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).parent.parent
-# inference results: output/full_baseline/{model}/{dataset}_{config}_{run}.json
-INFER_DIR = REPO_ROOT / "output" / "full_baseline"
-# per-model summary files (pass_at_1 lives here): output/{model}.json
+# inference results: output/onepass/{model}/{dataset}_{config}_{run}.json
+INFER_DIR = REPO_ROOT / "output" / "onepass"
+# per-model baseline summary files (pass_at_1 lives here): output/{model}_onepass.json
 SUMMARY_DIR = REPO_ROOT / "output"
 # stats output: output/token_stats/{model}/{dataset}_{config}{file_suffix}.json
 OUTPUT_DIR = REPO_ROOT / "output" / "token_stats"
@@ -92,11 +93,12 @@ def load_pass_at_1(
 ) -> float:
     """Look up pass@1 for this run from the per-model summary file.
 
-    The summary file (output/{model}.json) stores results keyed by
-    "{dataset}/{name}_{config}_{run_name}". Returns nan if the summary
+    The summary file (output/{model}_onepass.json) stores results keyed by
+    "{dataset}_{config}_{run_name}". Returns nan if the summary
     file or the key is missing.
     """
-    summary_path = SUMMARY_DIR / f"{model_key}.json"
+    # baseline summary file uses the _baseline suffix (written by run_inference with baseline=True)
+    summary_path = SUMMARY_DIR / f"{model_key}_onepass.json"
     if not summary_path.exists():
         return float("nan")
 
@@ -148,27 +150,26 @@ def compute_series_dataset(
     overflow: list[bool] = []
     budget_pct: list[float] = []
 
-    for task_idx, sample_responses in enumerate(data["responses"]):
-        # each sample is [response_text, finish_reason]; greedy = one sample per task
-        response, finish_reason = sample_responses[0][0], sample_responses[0][1]
-        parsed = parse_response(
-            response=response,
-            olmo_style=cfg["olmo_style"],
-        )
+    for task_details in data["details"]:
+        # greedy runs have one sample per task; take the first
+        sample = task_details[0]
+        response = sample["text"]
+        # pass tokenizer directly — thinkpack detects model properties internally (cached)
+        parsed = thinkpack.parse(response=response, tokenizer=tokenizer)
 
         # count tokens in the reasoning block; 0 if no reasoning present
         n_tokens = len(tokenizer.encode(parsed.reasoning))
         token_counts.append(n_tokens)
 
-        # truncated = reasoning block opened but closing tag never appeared
-        is_truncated = parsed.has_reasoning_block and not parsed.has_valid_reasoning
+        # truncated = reasoning block opened but the closing tag never appeared
+        is_truncated = parsed.has_truncated_reasoning
         truncated.append(is_truncated)
 
-        # overflow = generation hit the token limit (finish_reason from the model)
-        overflow.append(finish_reason == "length")
+        # overflow = generation hit the token limit
+        overflow.append(sample["stop_reason"] == "length")
 
-        # prompt_tokens is pre-computed in the inference file — no re-tokenization needed
-        prompt_tokens = data["token_counts"][task_idx][0]["prompt_tokens"]
+        # prompt_tokens_1 is pre-computed in the inference file — no re-tokenization needed
+        prompt_tokens = sample["prompt_tokens_1"]
         available = MAX_TOKENS - prompt_tokens
 
         if is_truncated:

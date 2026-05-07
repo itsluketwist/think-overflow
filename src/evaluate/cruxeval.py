@@ -4,8 +4,9 @@ import ast
 import re
 from typing import Any
 
+from thinkpack import ParsedResponse
+
 from src.evaluate.code import _execute_code
-from src.evaluate.parser import ParsedResponse
 from src.evaluate.statistics import compute_pass_at_1, wilson_ci
 
 

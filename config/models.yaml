@@ -1,9 +1,23 @@
 # model config - paths and optional per-model settings
+# defaults: recommended sampling params from the model card, used when the inference
+# config profile sets temperature/top_p/top_k to null (i.e. the "default" profile)
 
 # --- Qwen3 models (reasoning-capable, Apache 2.0) ---
+# defaults from: https://huggingface.co/Qwen/Qwen3-8B (thinking mode recommendation)
+
+qwen3-1.7b:
+  model_path: "Qwen/Qwen3-1.7B"
+  defaults:
+    temperature: 0.6
+    top_p: 0.85
+    top_k: 20
 
 qwen3-8b:
   model_path: "Qwen/Qwen3-8B"
+  defaults:
+    temperature: 0.6
+    top_p: 0.85
+    top_k: 20
 
 
 # --- Nvidia Nemotron reasoning models (Nvidia Open Model License) ---
@@ -11,18 +25,39 @@ qwen3-8b:
 
 nemotron-7b:
   model_path: "nvidia/OpenReasoning-Nemotron-7B"
+  defaults:
+    temperature: 0.6
+    top_p: 0.95
+    top_k: -1
 
 
 # --- Nvidia OpenCodeReasoning-Nemotron models (Nvidia Open Model License) ---
 
 code-nemotron-7b:
   model_path: "nvidia/OpenCodeReasoning-Nemotron-7B"
+  defaults:
+    temperature: 0.6
+    top_p: 0.95
+    top_k: -1
 
 
 # --- OLMo thinking models (AllenAI, Apache 2.0) ---
-# olmo_style: true — chat template injects <think> opening tag automatically;
-# a missing </think> in generated output causes response truncation
 
 olmo-3-7b-think:
   model_path: "allenai/OLMo-3-7B-Think"
-  olmo_style: true  # chat template injects <think> opening tag; missing </think> = truncation
+  defaults:
+    temperature: 0.6
+    top_p: 0.95
+    top_k: -1
+
+
+# --- DeepSeek R1 distilled models (DeepSeek, MIT License) ---
+# distilled from deepseek-r1 into llama-3.1-8b, retains chain-of-thought reasoning
+# defaults from: https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+
+deepseek-r1-8b:
+  model_path: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+  defaults:
+    temperature: 0.6
+    top_p: 0.95
+    top_k: -1

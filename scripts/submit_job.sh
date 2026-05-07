@@ -14,7 +14,9 @@ CPU_MEMORY="96G"
 models=(
     "qwen3-8b"
     "olmo-3-7b-think"
+    "nemotron-7b"
     "code-nemotron-7b"
+    "deepseek-r1-8b"
 )
 
 ###############################################################################
@@ -26,17 +28,18 @@ eval_datasets=(
     "code/evalplus"
     "code/livecodebench"
     "code/bigcodebench"
-    "code/editbench"
-    "code/codereval"
     "crux/cruxeval_i"
     "crux/cruxeval_o"
     "reasoning/gpqa"
     "math/gsm8k"
     "math/math500"
+    # "code/editbench"
+    # "code/codereval"
 )
 
 # config profile for inference (from config/inference.yaml)
-inference_config="greedy"
+# greedymax, greedy or default
+inference_config="greedymax"
 
 # reasoning token caps to sweep (pass 1 max tokens)
 max_think_tokens=(
@@ -46,7 +49,6 @@ max_think_tokens=(
     # 16384
     # 20480
     # 24576
-    # 28664
 )
 
 # overflow suffix keys (see _OVERFLOW_SUFFIXES in src/run_infer.py):
@@ -62,8 +64,8 @@ overflow_suffixes=(
     # "human"
 )
 
-# run single-pass baseline inference instead of two-pass inference
-baseline=true
+# onepass mode is automatically determined by whether max_think_tokens is populated
+[ ${#max_think_tokens[@]} -eq 0 ] && onepass=true || onepass=false
 
 # force regeneration even if output file already exists
 update=false
@@ -74,9 +76,9 @@ update=false
 
 datasets_csv=$(IFS=,; echo "${eval_datasets[*]}")
 
-baseline_flag=""
-if [ "$baseline" = true ]; then
-    baseline_flag="--baseline"
+onepass_flag=""
+if [ "$onepass" = true ]; then
+    onepass_flag="--onepass"
 fi
 
 update_flag=""
@@ -89,23 +91,23 @@ echo "Models: ${#models[@]}"
 echo "Eval datasets: ${#eval_datasets[@]}"
 echo "  $datasets_csv"
 echo "Config: $inference_config"
-echo "Baseline: $baseline"
-if [ "$baseline" = false ]; then
+echo "Single-pass: $onepass"
+if [ "$onepass" = false ]; then
     echo "Max think tokens: ${max_think_tokens[*]}"
     echo "Overflow suffixes: ${overflow_suffixes[*]}"
 fi
 echo "Update: $update"
 echo
 
-if [ "$baseline" = true ]; then
-    # submit one job per model for a single-pass baseline run
+if [ "$onepass" = true ]; then
+    # submit one job per model for a onepass unconstrained run
     for model in "${models[@]}"; do
-        echo "Submitting: $model | baseline"
+        echo "Submitting: $model | onepass"
 
         sbatch <<EOF
 #!/bin/bash -l
-#SBATCH --job-name=infer-${model}-baseline
-#SBATCH --output=/users/%u/code/think-overflow/logs/infer-${model}/baseline-%j.out
+#SBATCH --job-name=infer-${model}-onepass
+#SBATCH --output=/users/%u/code/think-overflow/logs/infer-${model}/onepass-%j.out
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu
 #SBATCH --gpus=1
@@ -118,10 +120,10 @@ run \
     -m $model \
     -d $datasets_csv \
     --config-profile $inference_config \
-    --baseline \
+    --onepass \
     $update_flag
 
-echo "Ending job: $model | baseline"
+echo "Ending job: $model | onepass"
 EOF
 
         # small delay between submissions to avoid scheduler overload

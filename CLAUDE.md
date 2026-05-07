@@ -8,15 +8,16 @@ Thinking-mode models (Qwen3, OLMo-Think, Nemotron) may spend their entire token 
 
 - vLLM progress bar shows incorrect total with `n>1` samples — harmless, can be ignored
 - `transformers>=5.0.0` breaks vLLM 0.7.3 — pin `transformers<5.0.0` in requirements
-- OLMo3 models have `olmo_style: true` in config — their chat templates inject an opening `<think>` tag automatically; a missing `</think>` in generated output causes response truncation
 - PyTorch 2.4+ prints a NCCL process group warning on exit — harmless
 
 ## Output Structure
 
-- Inference results: `output/infer/{model}/{dataset}_{config}_{run}.json`
-- Per-model summary (all runs): `output/{model}.json`
-- Pre-computed token budget stats: `output/stats/{series_key}/{dataset}.json`
-- Figures: `figures/01/`, `figures/02/`
+- Single-pass results: `output/onepass/{model}/{dataset}_{config}_{run}.json`
+- Two-pass results: `output/twopass/{model}/{dataset}_{config}_{run}.json`
+- Per-model onepass summary: `output/{model}_onepass.json`
+- Per-model two-pass summary: `output/{model}_twopass.json`
+- Pre-computed token budget stats: `output/token_stats/{series_key}/{dataset}.json`
+- Figures: `figures/`
 
 ## Code Style Notes
 
@@ -24,11 +25,11 @@ Thinking-mode models (Qwen3, OLMo-Think, Nemotron) may spend their entire token 
 
 ## Pipeline Overview
 
-- One CLI entry point: `infer`
-- Two modes: `--baseline` (single-pass greedy) and `--max-think-tokens N` (two-pass overflow)
-- Base models registered in `config/models.yaml`
-- HPC job submission via `scripts/submit_job.sh`
-- Config profiles in `config/inference.yaml`; use `greedy` for all experiments
+- One CLI entry point: `run`
+- Two modes: `--onepass` (unconstrained, no token cap) and `--max-think-tokens N` (two-pass overflow)
+- Three config profiles in `config/inference.yaml`: `greedymax` (greedy, 32k), `greedy` (greedy, 28k), `default` (model-recommended sampling, 28k, samples=3)
+- Base models (with per-model default sampling params) registered in `config/models.yaml`
+- HPC job submission via `scripts/submit_job.sh`; mode auto-derived from whether `max_think_tokens` is set
 
 ## Overflow Recovery Suffixes
 
