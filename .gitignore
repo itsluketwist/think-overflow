@@ -25,6 +25,7 @@ harness/editbench/
 todo.txt
 logs/*
 figures/archive/*
+data/notes.md
 
 # generated output (inference results, stats)
 output/full_baseline/*

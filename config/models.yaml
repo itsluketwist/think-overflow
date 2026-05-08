@@ -20,6 +20,17 @@ qwen3-8b:
     top_k: 20
 
 
+# --- Qwen3.5 models (reasoning-capable, Apache 2.0) ---
+# note: verify model_path exists on huggingface before use
+
+qwen3.5-0.8b:
+  model_path: "Qwen/Qwen3.5-0.8B"
+  defaults:
+    temperature: 0.6
+    top_p: 0.85
+    top_k: 20
+
+
 # --- Nvidia Nemotron reasoning models (Nvidia Open Model License) ---
 # openreasoning-nemotron-7b is built on qwen2.5-7b, post-trained for reasoning (math, code, science)
 
@@ -37,6 +48,25 @@ code-nemotron-7b:
   model_path: "nvidia/OpenCodeReasoning-Nemotron-7B"
   defaults:
     temperature: 0.6
+    top_p: 0.95
+    top_k: -1
+
+# opencodereasoning-nemotron-1.1-7b is the updated version of opencodereasoning-nemotron-7b
+code-nemotron-1.1-7b:
+  model_path: "nvidia/OpenCodeReasoning-Nemotron-1.1-7B"
+  defaults:
+    temperature: 0.6
+    top_p: 0.95
+    top_k: -1
+
+
+# --- Microsoft Phi-4 reasoning models (MIT License) ---
+# defaults from: https://huggingface.co/microsoft/Phi-4-reasoning (thinking mode recommendation)
+
+phi-4-reasoning:
+  model_path: "microsoft/Phi-4-reasoning"
+  defaults:
+    temperature: 0.8
     top_p: 0.95
     top_k: -1
 
