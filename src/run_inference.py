@@ -181,7 +181,7 @@ def _run_twopass(
     for step1_task_responses, step1_task_reasons in zip(step1_responses, step1_reasons):
         for response, reason in zip(step1_task_responses, step1_task_reasons):
             transition = bool(reason == "length")
-            think_prefix = response + (overflow_suffix if transition else "")
+            think_prefix = response.strip() + (overflow_suffix if transition else "")
             all_think_prefixes_flat.append(think_prefix)
             all_transition_flat.append(transition)
 
