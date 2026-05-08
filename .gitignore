@@ -32,3 +32,4 @@ output/full_baseline/*
 output/full_transition/*
 output/initial/*
 output/archive/*
+output/debug/*
