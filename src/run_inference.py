@@ -51,7 +51,7 @@ def _run_onepass(
     temperature: float | None,
     top_p: float | None,
     top_k: int | None,
-    max_tokens: int,
+    max_tokens: int | None,
     chunk_size: int,
 ) -> list[list[dict]]:
     """Run single-pass unconstrained inference over a list of prompts.
@@ -110,7 +110,7 @@ def _run_twopass(
     tokenizer: Any,
     max_think_tokens: int,
     overflow_suffix: str,
-    answer_tokens: int,
+    answer_tokens: int | None,
     samples: int,
     seed: int,
     temperature: float | None,
@@ -301,8 +301,8 @@ def run_inference(
         key=model,
     )
 
-    # pass 2 answer budget: max_tokens from the config (28672 for greedy/default, 32768 for greedymax)
-    answer_tokens: int = inference_config.get("max_tokens", 32768)
+    # pass 2 answer budget: max_tokens from the config (null = no cap, generate until EOS)
+    answer_tokens: int | None = inference_config.get("max_tokens")
     samples: int = inference_config.get("samples", 1)
 
     # sampling param resolution: inference config takes priority; when null (e.g. "default"
@@ -371,7 +371,10 @@ def run_inference(
 
     # tokenizer is obtained from the loaded LLM during phase 1; if phase 1 is
     # skipped it is loaded via AutoTokenizer for use in evaluation
-    tokenizer = None
+    tokenizer = AutoTokenizer.from_pretrained(
+        pretrained_model_name_or_path=model_cfg["model_path"],
+        trust_remote_code=True,
+    )
 
     # --- phase 1: generation ---
     if datasets_to_generate:
@@ -385,8 +388,7 @@ def run_inference(
             max_num_seqs=inference_config.get("max_num_seqs"),
         )
         log("Model loaded successfully.")
-        tokenizer = llm.get_tokenizer()
-        mi = thinkpack.get_model_info(tokenizer)
+        mi = thinkpack.get_model_info(tokenizer=tokenizer)
         log(f"Model info: prefixed={mi.prefixed}, tag={mi.tag_content}")
         log()
 
@@ -498,11 +500,6 @@ def run_inference(
 
     # --- phase 2: evaluate all datasets ---
     log_header(f"PHASE 2: EVALUATION ({len(all_datasets)} datasets)")
-
-    # load tokenizer for evaluation if phase 1 was skipped (no weights, just config)
-    if tokenizer is None:
-        log(f"Loading tokenizer: {model_cfg['model_path']}")
-        tokenizer = AutoTokenizer.from_pretrained(model_cfg["model_path"])
 
     # summary file goes into the same root as the run (debug has its own subdir)
     summary_dir = Path(output) / "debug" if debug else Path(output)

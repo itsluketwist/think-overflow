@@ -27,7 +27,7 @@ def prompt_llm(
     temperature: float | None = 0.0,
     top_p: float | None = 1.0,
     top_k: int | None = -1,
-    max_tokens: int = 8192,
+    max_tokens: int | None = None,
     min_tokens: int = 32,
     stop: list[str] | None = None,
     chunk_size: int = 512,

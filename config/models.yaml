@@ -2,78 +2,94 @@
 # defaults: recommended sampling params from the model card, used when the inference
 # config profile sets temperature/top_p/top_k to null (i.e. the "default" profile)
 
-# --- Qwen3 models (reasoning-capable, Apache 2.0) ---
-# defaults from: https://huggingface.co/Qwen/Qwen3-8B (thinking mode recommendation)
+# --- Qwen3 models (Alibaba, Apache 2.0) ---
 
-qwen3-1.7b:
-  model_path: "Qwen/Qwen3-1.7B"
+qwen3-0b:  # for debug test runs, not experiments
+  model_path: "Qwen/Qwen3-0.6B"
   defaults:
     temperature: 0.6
-    top_p: 0.85
+    top_p: 0.95
     top_k: 20
 
 qwen3-8b:
   model_path: "Qwen/Qwen3-8B"
   defaults:
     temperature: 0.6
-    top_p: 0.85
+    top_p: 0.95
+    top_k: 20
+
+qwen3-14b:
+  model_path: "Qwen/Qwen3-14B"
+  defaults:
+    temperature: 0.6
+    top_p: 0.95
     top_k: 20
 
 
-# --- Qwen3.5 models (reasoning-capable, Apache 2.0) ---
-# note: verify model_path exists on huggingface before use
+# --- Qwen3.5 models (Alibaba, Apache 2.0) ---
 
-qwen3.5-0.8b:
-  model_path: "Qwen/Qwen3.5-0.8B"
+qwen3.5-9b:
+  model_path: "Qwen/Qwen3.5-9B"
   defaults:
     temperature: 0.6
     top_p: 0.85
     top_k: 20
 
 
-# --- Nvidia Nemotron reasoning models (Nvidia Open Model License) ---
-# openreasoning-nemotron-7b is built on qwen2.5-7b, post-trained for reasoning (math, code, science)
+# --- OpenReasoning-Nemotron models (Nvidia, CC-BY-4.0) ---
 
-nemotron-7b:
+or-7b:
   model_path: "nvidia/OpenReasoning-Nemotron-7B"
   defaults:
     temperature: 0.6
     top_p: 0.95
     top_k: -1
 
-
-# --- Nvidia OpenCodeReasoning-Nemotron models (Nvidia Open Model License) ---
-
-code-nemotron-7b:
-  model_path: "nvidia/OpenCodeReasoning-Nemotron-7B"
+or-14b:
+  model_path: "nvidia/OpenReasoning-Nemotron-14B"
   defaults:
     temperature: 0.6
     top_p: 0.95
     top_k: -1
 
-# opencodereasoning-nemotron-1.1-7b is the updated version of opencodereasoning-nemotron-7b
-code-nemotron-1.1-7b:
+
+# --- OpenCodeReasoning-Nemotron models (Nvidia, CC-BY-4.0) ---
+
+ocr-7b:
   model_path: "nvidia/OpenCodeReasoning-Nemotron-1.1-7B"
   defaults:
     temperature: 0.6
     top_p: 0.95
     top_k: -1
 
-
-# --- Microsoft Phi-4 reasoning models (MIT License) ---
-# defaults from: https://huggingface.co/microsoft/Phi-4-reasoning (thinking mode recommendation)
-
-phi-4-reasoning:
-  model_path: "microsoft/Phi-4-reasoning"
+ocr-14b:
+  model_path: "nvidia/OpenCodeReasoning-Nemotron-1.1-14B"
   defaults:
-    temperature: 0.8
+    temperature: 0.6
+    top_p: 0.95
+    top_k: -1
+
+
+# --- Ministral reasoning models (Mistral, Apache 2.0) ---
+
+ministral-8b:
+  model_path: "mistralai/Ministral-3-8B-Reasoning-2512"
+  defaults:
+    temperature: 0.7
+    top_p: 0.95
+    top_k: -1
+
+ministral-14b:
+  model_path: "mistralai/Ministral-3-14B-Reasoning-2512"
+  defaults:
+    temperature: 0.7
     top_p: 0.95
     top_k: -1
 
 
 # --- OLMo thinking models (AllenAI, Apache 2.0) ---
 
-olmo-3-7b-think:
+olmo-3-7b:
   model_path: "allenai/OLMo-3-7B-Think"
   defaults:
     temperature: 0.6
@@ -82,10 +98,8 @@ olmo-3-7b-think:
 
 
 # --- DeepSeek R1 distilled models (DeepSeek, MIT License) ---
-# distilled from deepseek-r1 into llama-3.1-8b, retains chain-of-thought reasoning
-# defaults from: https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-8B
 
-deepseek-r1-8b:
+llama-r1-8b:
   model_path: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
   defaults:
     temperature: 0.6
