@@ -13,10 +13,13 @@ CPU_MEMORY="96G"
 
 models=(
     "qwen3-8b"
+    "qwen3-14b"
+    "qwen3.5-9b"
     "olmo-3-7b-think"
-    "nemotron-7b"
-    "code-nemotron-7b"
-    "deepseek-r1-8b"
+    "or-7b"
+    "ocr-7b"
+    "ministral-8b"
+    "llama-r1-8b"
 )
 
 ###############################################################################
@@ -38,8 +41,8 @@ eval_datasets=(
 )
 
 # config profile for inference (from config/inference.yaml)
-# greedymax, greedy or default
-inference_config="greedymax"
+# unlimited, greedy or default
+inference_config="unlimited"
 
 # reasoning token caps to sweep (pass 1 max tokens)
 max_think_tokens=(
