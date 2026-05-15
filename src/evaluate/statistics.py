@@ -53,17 +53,19 @@ def compute_pass_at_1(
 
 def compute_reasoning_statistics(
     parsed_responses: list[list[ParsedResponse]],
-    details: list[list[dict]] | None,
+    details: list[list[dict]],
     results_breakdown: list[dict[str, Any]],
 ) -> dict[str, Any]:
     """Compute reasoning reliability and overflow statistics.
 
     Uses thinkpack.compute_stats for reasoning quality metrics (macro-averaged
-    across tasks). Derives transition_rate and overflow_rate from the details
-    structure (the unified per-sample dict stored alongside each response).
+    across tasks). Derives reasoning_overflow_rate and general_overflow_rate from
+    the details structure (the unified per-sample dict stored alongside each response).
 
-    transition_rate naturally reflects the run mode: it is always 0 for onepass
-    (transition=False is stored for every sample) and meaningful for twopass.
+    reasoning_overflow_rate: rate at which reasoning was forcibly capped at
+    max_think_tokens (the think-overflow problem itself). Always 0 for onepass.
+    general_overflow_rate: rate at which the final generation hit the token limit
+    (answer truncated). Meaningful for both onepass and twopass.
 
     Returns a flat dict of scalar rates — no per-sample-index lists.
     """
@@ -77,7 +79,8 @@ def compute_reasoning_statistics(
         "empty_reasoning_rate": 0.0,
         "answer_rate": 0.0,
         "transition_rate": 0.0,
-        "overflow_rate": 0.0,
+        "reasoning_overflow_rate": 0.0,
+        "general_overflow_rate": 0.0,
         "answer_extracted_rate": 0.0,
     }
 
@@ -87,17 +90,28 @@ def compute_reasoning_statistics(
     # thinkpack computes reliability metrics macro-averaged across tasks
     tp = thinkpack.compute_stats(responses=parsed_responses)
 
-    # transition and overflow rates from the details structure
-    transition_rate = 0.0
-    overflow_rate = 0.0
-    if details:
-        flat = [s for task in details for s in task]
-        n = len(flat)
-        if n:
-            transition_rate = sum(s["transition"] for s in flat) / n
-            overflow_rate = sum(s["truncated"] for s in flat) / n
+    flat_details = [s for task in details for s in task]
+    n = len(flat_details)
+    # transition_rate: how often pass 1 was forcibly capped (twopass only; 0 for onepass)
+    transition_rate = sum(s["transition"] for s in flat_details) / n if n else 0.0
+    # general_overflow_rate: how often the final generation hit the token limit
+    general_overflow_rate = sum(s["truncated"] for s in flat_details) / n if n else 0.0
 
-    # answer extraction rate from the per-sample evaluator breakdown
+    # flatten parsed responses in the same [task][sample] order as details
+    flat_parsed = [pr for task in parsed_responses for pr in task]
+    # reasoning_overflow_rate: truncated AND pr.has_answer is False (no text after </think>)
+    reasoning_overflow_rate = (
+        sum(
+            1
+            for d, pr in zip(flat_details, flat_parsed)
+            if d["truncated"] and not pr.has_answer
+        )
+        / n
+        if n
+        else 0.0
+    )
+
+    # answer_extracted_rate uses the evaluator breakdown (semantic validity check)
     flat_samples = [s for task in results_breakdown for s in task["samples"]]
     n_samples = len(flat_samples)
     answer_extracted_rate = (
@@ -109,7 +123,9 @@ def compute_reasoning_statistics(
     log(
         f"    Reasoning: valid={tp.valid_reasoning_rate:.1%}, "
         f"missing={tp.missing_reasoning_rate:.1%}, "
-        f"transition={transition_rate:.1%}, overflow={overflow_rate:.1%}, "
+        f"transition={transition_rate:.1%}, "
+        f"reasoning_overflow={reasoning_overflow_rate:.1%}, "
+        f"general_overflow={general_overflow_rate:.1%}, "
         f"extracted={answer_extracted_rate:.1%}",
     )
 
@@ -123,7 +139,8 @@ def compute_reasoning_statistics(
         "answer_rate": tp.answer_rate,
         # our custom stats derived from the details structure
         "transition_rate": transition_rate,
-        "overflow_rate": overflow_rate,
+        "reasoning_overflow_rate": reasoning_overflow_rate,
+        "general_overflow_rate": general_overflow_rate,
         "answer_extracted_rate": answer_extracted_rate,
     }
 

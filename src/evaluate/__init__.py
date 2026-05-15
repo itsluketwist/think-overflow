@@ -28,8 +28,8 @@ def evaluate(
     responses: list[list[str]],
     records: list[dict[str, Any]],
     eval_type: str,
+    details: list[list[dict]],
     tokenizer: Any | None = None,
-    details: list[list[dict]] | None = None,
     dataset_name: str | None = None,
 ) -> tuple[dict, list[dict]]:
     """Evaluate model responses against ground truth, dispatching on eval_type.
