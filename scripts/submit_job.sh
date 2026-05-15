@@ -13,13 +13,15 @@ CPU_MEMORY="96G"
 
 models=(
     "qwen3-8b"
-    "qwen3-14b"
     "qwen3.5-9b"
     "olmo-3-7b-think"
     "or-7b"
     "ocr-7b"
     "ministral-8b"
     "llama-r1-8b"
+
+    # "qwen3-14b"
+    # "ministral-14b"
 )
 
 ###############################################################################
@@ -31,6 +33,7 @@ eval_datasets=(
     "code/evalplus"
     "code/livecodebench"
     "code/bigcodebench"
+    "code/code_contests"
     "crux/cruxeval_i"
     "crux/cruxeval_o"
     "reasoning/gpqa"
@@ -41,17 +44,25 @@ eval_datasets=(
 )
 
 # config profile for inference (from config/inference.yaml)
-# unlimited, greedy or default
-inference_config="unlimited"
+# greedy, creative or default
+inference_config="greedy"
 
-# reasoning token caps to sweep (pass 1 max tokens)
+# overall token budget (pass 1 + pass 2 combined for twopass, full generation for onepass)
+# max_tokens=null
+# max_tokens=8192
+# max_tokens=16384
+max_tokens=32768
+
+# reasoning token caps to sweep (pass 1 max tokens); "" means onepass (no cap)
 max_think_tokens=(
+    ""  # onepass
     # 4096
     # 8192
     # 12288
     # 16384
     # 20480
     # 24576
+    # 28672
 )
 
 # overflow suffix keys (see _OVERFLOW_SUFFIXES in src/run_infer.py):
@@ -67,9 +78,6 @@ overflow_suffixes=(
     # "human"
 )
 
-# onepass mode is automatically determined by whether max_think_tokens is populated
-[ ${#max_think_tokens[@]} -eq 0 ] && onepass=true || onepass=false
-
 # force regeneration even if output file already exists
 update=false
 
@@ -78,11 +86,6 @@ update=false
 ###############################################################################
 
 datasets_csv=$(IFS=,; echo "${eval_datasets[*]}")
-
-onepass_flag=""
-if [ "$onepass" = true ]; then
-    onepass_flag="--onepass"
-fi
 
 update_flag=""
 if [ "$update" = true ]; then
@@ -94,23 +97,37 @@ echo "Models: ${#models[@]}"
 echo "Eval datasets: ${#eval_datasets[@]}"
 echo "  $datasets_csv"
 echo "Config: $inference_config"
-echo "Single-pass: $onepass"
-if [ "$onepass" = false ]; then
-    echo "Max think tokens: ${max_think_tokens[*]}"
-    echo "Overflow suffixes: ${overflow_suffixes[*]}"
-fi
+echo "Max tokens: $max_tokens"
+echo "Max think tokens: ${max_think_tokens[*]}"
+echo "Overflow suffixes: ${overflow_suffixes[*]}"
 echo "Update: $update"
 echo
 
-if [ "$onepass" = true ]; then
-    # submit one job per model for a onepass unconstrained run
-    for model in "${models[@]}"; do
-        echo "Submitting: $model | onepass"
+for model in "${models[@]}"; do
+    for tokens in "${max_think_tokens[@]}"; do
+        # "" sentinel means onepass (no reasoning cap); twopass sweeps over overflow suffixes
+        if [ -z "$tokens" ]; then
+            suffixes=("")
+        else
+            suffixes=("${overflow_suffixes[@]}")
+        fi
 
-        sbatch <<EOF
+        for suffix in "${suffixes[@]}"; do
+            # build human-readable run tag and optional cli flags
+            if [ -z "$tokens" ]; then
+                run_tag="onepass"
+                think_flags=""
+            else
+                run_tag="th${tokens}-${suffix}"
+                think_flags="--max-think-tokens $tokens --overflow-suffix $suffix"
+            fi
+
+            echo "Submitting: $model | mx=$max_tokens | $run_tag"
+
+            sbatch <<EOF
 #!/bin/bash -l
-#SBATCH --job-name=infer-${model}-onepass
-#SBATCH --output=/users/%u/code/think-overflow/logs/infer-${model}/onepass-%j.out
+#SBATCH --job-name=infer-${model}-mx${max_tokens}-${run_tag}
+#SBATCH --output=/users/%u/code/think-overflow/logs/infer-${model}/mx${max_tokens}-${run_tag}-%j.out
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu
 #SBATCH --gpus=1
@@ -123,51 +140,18 @@ run \
     -m $model \
     -d $datasets_csv \
     --config-profile $inference_config \
-    --onepass \
+    --max-tokens $max_tokens \
+    $think_flags \
     $update_flag
 
-echo "Ending job: $model | onepass"
+echo "Ending job: $model | mx=$max_tokens | $run_tag"
 EOF
 
-        # small delay between submissions to avoid scheduler overload
-        sleep 0.5
-    done
-else
-    # submit one job per model × max_think_tokens × overflow_suffix combination
-    for model in "${models[@]}"; do
-        for tokens in "${max_think_tokens[@]}"; do
-            for suffix in "${overflow_suffixes[@]}"; do
-                echo "Submitting: $model | mt=$tokens | suffix=$suffix"
-
-                sbatch <<EOF
-#!/bin/bash -l
-#SBATCH --job-name=infer-${model}-mt${tokens}-${suffix}
-#SBATCH --output=/users/%u/code/think-overflow/logs/infer-${model}/mt${tokens}-${suffix}-%j.out
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu
-#SBATCH --gpus=1
-#SBATCH --mem=${CPU_MEMORY}
-#SBATCH --constraint=${GPU_CONSTRAINT}
-
-source ./scripts/setup_job.sh
-
-run \
-    -m $model \
-    -d $datasets_csv \
-    --config-profile $inference_config \
-    --max-think-tokens $tokens \
-    --overflow-suffix $suffix \
-    $update_flag
-
-echo "Ending job: $model | mt=$tokens | suffix=$suffix"
-EOF
-
-                # small delay between submissions to avoid scheduler overload
-                sleep 0.5
-            done
+            # small delay between submissions to avoid scheduler overload
+            sleep 0.5
         done
     done
-fi
+done
 
 echo
 echo "All jobs submitted!"

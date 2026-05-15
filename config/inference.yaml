@@ -1,21 +1,10 @@
 # inference config - generation and vllm parameters
 
-greedymax:
-  seed: 42
-  temperature: 0.0
-  top_p: 1.0
-  top_k: -1  # disabled for greedy
-  max_tokens: 32768
-  min_tokens: 32
-  samples: 1
-  chunk_size: 512
-
 greedy:
   seed: 42
   temperature: 0.0
   top_p: 1.0
   top_k: -1  # disabled for greedy
-  max_tokens: 28672  # 32768 total - 4096 reserved for the question prompt
   min_tokens: 32
   samples: 1
   chunk_size: 512
@@ -25,7 +14,6 @@ default:
   temperature: null  # use model default
   top_p: null  # use model default
   top_k: null  # use model default
-  max_tokens: 28672  # 32768 total - 4096 reserved for the question prompt
   min_tokens: 32
   samples: 3  # more samples when non-deterministic
   chunk_size: 512
@@ -35,17 +23,6 @@ creative:
   temperature: 0.6
   top_p: 0.95
   top_k: -1
-  max_tokens: 28672  # 32768 total - 4096 reserved for the question prompt
   min_tokens: 32
   samples: 3  # more samples when non-deterministic
-  chunk_size: 512
-
-unlimited:
-  seed: 42
-  temperature: 0.0
-  top_p: 1.0
-  top_k: -1  # disabled for greedy
-  max_tokens: null  # no cap — generate until EOS or model context limit
-  min_tokens: 32
-  samples: 1
   chunk_size: 512

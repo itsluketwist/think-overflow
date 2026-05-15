@@ -3,6 +3,8 @@
 # config profile sets temperature/top_p/top_k to null (i.e. the "default" profile)
 
 # --- Qwen3 models (Alibaba, Apache 2.0) ---
+# context: 40,960 | generation: 32,768 (recommended)
+# source: https://huggingface.co/Qwen/Qwen3-8B
 
 qwen3-0b:  # for debug test runs, not experiments
   model_path: "Qwen/Qwen3-0.6B"
@@ -27,6 +29,8 @@ qwen3-14b:
 
 
 # --- Qwen3.5 models (Alibaba, Apache 2.0) ---
+# context: 262,144 | generation: 32,768 (instruct), 81,920 (complex)
+# source: https://huggingface.co/Qwen/Qwen3.5-9B
 
 qwen3.5-9b:
   model_path: "Qwen/Qwen3.5-9B"
@@ -37,6 +41,8 @@ qwen3.5-9b:
 
 
 # --- OpenReasoning-Nemotron models (Nvidia, CC-BY-4.0) ---
+# context: 131,072 | generation: 64,000 (recommended)
+# source: https://huggingface.co/nvidia/OpenReasoning-Nemotron-7B
 
 or-7b:
   model_path: "nvidia/OpenReasoning-Nemotron-7B"
@@ -54,6 +60,8 @@ or-14b:
 
 
 # --- OpenCodeReasoning-Nemotron models (Nvidia, CC-BY-4.0) ---
+# context: 65,536 | generation: 49,152 (recommended)
+# source: https://huggingface.co/nvidia/OpenCodeReasoning-Nemotron-1.1-7B
 
 ocr-7b:
   model_path: "nvidia/OpenCodeReasoning-Nemotron-1.1-7B"
@@ -71,6 +79,8 @@ ocr-14b:
 
 
 # --- Ministral reasoning models (Mistral, Apache 2.0) ---
+# context = max generation: 262,144 (no separate cap; input + output share the full window)
+# source: https://huggingface.co/mistralai/Ministral-3-8B-Reasoning-2512
 
 ministral-8b:
   model_path: "mistralai/Ministral-3-8B-Reasoning-2512"
@@ -88,6 +98,8 @@ ministral-14b:
 
 
 # --- OLMo thinking models (AllenAI, Apache 2.0) ---
+# context: 65,536 | generation: 32,768 (recommended)
+# source: https://huggingface.co/allenai/OLMo-3-7B-Think
 
 olmo-3-7b:
   model_path: "allenai/OLMo-3-7B-Think"
@@ -98,6 +110,8 @@ olmo-3-7b:
 
 
 # --- DeepSeek R1 distilled models (DeepSeek, MIT License) ---
+# context: 131,072 | generation: 32,768 (recommended)
+# source: https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Llama-8B
 
 llama-r1-8b:
   model_path: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"

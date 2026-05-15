@@ -66,14 +66,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--onepass",
-    action="store_true",
-    default=False,
-    dest="onepass",
-    help=(
-        "Run onepass unconstrained inference instead of two-pass inference. "
-        "Mutually exclusive with --max-think-tokens."
-    ),
+    "--max-tokens",
+    type=int,
+    default=None,
+    help="Overall token budget: total generation tokens for onepass, or combined Pass 1 + Pass 2 tokens for twopass.",
 )
 
 parser.add_argument(
@@ -94,13 +90,6 @@ parser.add_argument(
         "formal='... I have to stop thinking and answer now.', "
         "human='... oops, I really need to stop thinking and to answer.'"
     ),
-)
-
-parser.add_argument(
-    "--run-name",
-    type=str,
-    default=None,
-    help="Short tag appended to output filenames. Defaults to 'mt{max_think_tokens}'.",
 )
 
 parser.add_argument(
@@ -126,12 +115,6 @@ def main() -> None:
     """Parse and validate CLI args, then dispatch to run_inference."""
     args = parser.parse_args()
 
-    # validate: exactly one of --onepass or --max-think-tokens must be provided
-    if args.onepass and args.max_think_tokens is not None:
-        parser.error("--onepass and --max-think-tokens are mutually exclusive.")
-    if not args.onepass and args.max_think_tokens is None:
-        parser.error("one of --onepass or --max-think-tokens is required.")
-
     run_inference(
         model=args.model,
         model_config=args.model_config,
@@ -140,10 +123,9 @@ def main() -> None:
         output=args.output,
         datasets=args.datasets,
         eval_type=args.type,
-        onepass=args.onepass,
         max_think_tokens=args.max_think_tokens,
+        max_tokens=args.max_tokens,
         overflow_suffix=args.overflow_suffix,
-        run_name=args.run_name,
         debug=args.debug,
         update=args.update,
     )

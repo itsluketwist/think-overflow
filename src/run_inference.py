@@ -110,7 +110,7 @@ def _run_twopass(
     tokenizer: Any,
     max_think_tokens: int,
     overflow_suffix: str,
-    answer_tokens: int | None,
+    max_tokens: int | None,
     samples: int,
     seed: int,
     temperature: float | None,
@@ -188,6 +188,25 @@ def _run_twopass(
     # expand prompts to match flattened (prompt × sample) pairs
     flat_prompts = [p for p in prompts for _ in range(samples)]
 
+    # compute per-sample remaining budget for pass 2: overall cap minus reasoning tokens used
+    p2_max_tokens: list[int] | None
+    if max_tokens is not None:
+        p2_max_tokens = [
+            max(
+                1,
+                max_tokens
+                - (
+                    max_think_tokens
+                    if step1_reasons[i][j] == "length"
+                    else p1_reason_toks[i][j]
+                ),
+            )
+            for i in range(n_prompts)
+            for j in range(samples)
+        ]
+    else:
+        p2_max_tokens = None
+
     # --- pass 2: generate answers given the completed reasoning block ---
     log("    Pass 2: generating answers from reasoning...")
     with log_timer("pass 2"):
@@ -206,7 +225,7 @@ def _run_twopass(
             temperature=temperature,
             top_p=top_p,
             top_k=top_k,
-            max_tokens=answer_tokens,
+            max_tokens=p2_max_tokens,
             min_tokens=1,
             stop=None,
             chunk_size=chunk_size,
@@ -257,33 +276,33 @@ def run_inference(
     output: str,
     datasets: str,
     eval_type: str | None,
-    onepass: bool,
     max_think_tokens: int | None,
+    max_tokens: int | None,
     overflow_suffix: str,
-    run_name: str | None,
     update: bool,
     debug: bool = False,
 ) -> None:
     """Run two-pass or onepass inference with explicit configuration arguments.
 
     The overflow_suffix argument is a key from _OVERFLOW_SUFFIXES (e.g. 'formal'),
-    not the resolved string. Mutually exclusive: either onepass=True or
-    max_think_tokens must be set.
+    not the resolved string. When max_think_tokens is None, runs onepass (unconstrained).
     """
     # resolve suffix key to the actual string appended to truncated reasoning
     overflow_suffix_str: str = _OVERFLOW_SUFFIXES[overflow_suffix]
 
-    # default run name encodes the mode: "onepass" or "mt{cap}_{suffix}"
-    if onepass:
-        run_name = run_name or "onepass"
+    # run name encodes the mode and token budgets for unique, readable output filenames
+    if max_think_tokens is None:
+        run_name = f"mx{max_tokens}_onepass"
     else:
-        run_name = run_name or f"mt{max_think_tokens}_{overflow_suffix}"
+        run_name = f"mx{max_tokens}_th{max_think_tokens}_{overflow_suffix}"
 
     log_header("INFERENCE")
     log(f"Model: {model}")
     log(f"Config: {config_file} [{config_profile}]")
-    log(f"Mode: {'onepass (unconstrained)' if onepass else 'two-pass overflow'}")
-    if not onepass:
+    log(
+        f"Mode: {'onepass (unconstrained)' if max_think_tokens is None else 'two-pass overflow'}"
+    )
+    if max_think_tokens is not None:
         log(f"Max think tokens: {max_think_tokens}")
         log(f"Overflow suffix: {overflow_suffix} ({repr(overflow_suffix_str)})")
     log(f"Run name: {run_name}")
@@ -301,8 +320,20 @@ def run_inference(
         key=model,
     )
 
-    # pass 2 answer budget: max_tokens from the config (null = no cap, generate until EOS)
-    answer_tokens: int | None = inference_config.get("max_tokens")
+    # validate token budgets: thinking cap must leave room for the answer
+    if max_think_tokens is not None and max_tokens is not None:
+        if max_think_tokens >= max_tokens:
+            raise ValueError(
+                f"max_think_tokens ({max_think_tokens}) must be less than "
+                f"max_tokens ({max_tokens}) — no budget left for the answer.",
+            )
+        headroom = max_tokens - max_think_tokens
+        if headroom < 512:
+            log(
+                f"WARNING: only {headroom} tokens remain for the answer after "
+                f"the reasoning cap ({max_think_tokens}/{max_tokens}) — answers may be truncated.",
+            )
+
     samples: int = inference_config.get("samples", 1)
 
     # sampling param resolution: inference config takes priority; when null (e.g. "default"
@@ -319,7 +350,7 @@ def run_inference(
     if top_k is None:
         top_k = model_defaults.get("top_k")
 
-    log(f"Answer tokens (pass 2 max): {answer_tokens}")
+    log(f"Max tokens (pass 2 answer budget): {max_tokens}")
     log(f"Samples: {samples}")
     log(f"Temperature: {temperature if temperature is not None else 'default (1.0)'}")
     log(f"Top-p: {top_p if top_p is not None else 'default (1.0)'}")
@@ -330,7 +361,7 @@ def run_inference(
         output_dir = Path(output) / "debug" / model
     else:
         # onepass and two-pass results are kept in separate directories
-        output_subdir = "onepass" if onepass else "twopass"
+        output_subdir = "onepass" if max_think_tokens is None else "twopass"
         output_dir = Path(output) / output_subdir / model
     output_dir.mkdir(parents=True, exist_ok=True)
     log(f"Output directory: {output_dir}")
@@ -415,7 +446,7 @@ def run_inference(
             )
 
             output_data: dict[str, Any]
-            if onepass:
+            if max_think_tokens is None:
                 details = _run_onepass(
                     llm=llm,
                     tokenizer=tokenizer,
@@ -425,7 +456,7 @@ def run_inference(
                     temperature=temperature,
                     top_p=top_p,
                     top_k=top_k,
-                    max_tokens=answer_tokens,
+                    max_tokens=max_tokens,
                     chunk_size=inference_config.get("chunk_size", 512),
                 )
                 output_data = {
@@ -453,7 +484,7 @@ def run_inference(
                     prompts=prompts,
                     max_think_tokens=max_think_tokens,  # type: ignore[arg-type]
                     overflow_suffix=overflow_suffix_str,
-                    answer_tokens=answer_tokens,
+                    max_tokens=max_tokens,
                     samples=samples,
                     seed=inference_config.get("seed", 42),
                     temperature=temperature,
@@ -479,7 +510,7 @@ def run_inference(
                         "max_think_tokens": max_think_tokens,
                         "overflow_suffix_key": overflow_suffix,
                         "overflow_suffix": overflow_suffix_str,
-                        "answer_tokens": answer_tokens,
+                        "max_tokens": max_tokens,
                         "run_name": run_name,
                         "transition_count": n_transition,
                         "transition_rate": n_transition / max(n_total, 1),
@@ -503,7 +534,7 @@ def run_inference(
 
     # summary file goes into the same root as the run (debug has its own subdir)
     summary_dir = Path(output) / "debug" if debug else Path(output)
-    results_suffix = "_onepass" if onepass else "_twopass"
+    results_suffix = "_onepass" if max_think_tokens is None else "_twopass"
     with json_results(
         directory=summary_dir,
         model=model,
@@ -587,7 +618,9 @@ def run_inference(
     log_header("SUMMARY")
     log(f"Model: {model}")
     mode_str = (
-        "onepass" if onepass else f"twopass (max_think_tokens={max_think_tokens})"
+        "onepass"
+        if max_think_tokens is None
+        else f"twopass (max_think_tokens={max_think_tokens})"
     )
     log(f"Run: {run_name} ({mode_str})")
     log(f"Datasets evaluated: {len(eval_results)}/{len(all_datasets)}")

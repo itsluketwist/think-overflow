@@ -27,7 +27,7 @@ def prompt_llm(
     temperature: float | None = 0.0,
     top_p: float | None = 1.0,
     top_k: int | None = -1,
-    max_tokens: int | None = None,
+    max_tokens: int | list[int] | None = None,
     min_tokens: int = 32,
     stop: list[str] | None = None,
     chunk_size: int = 512,
@@ -42,6 +42,7 @@ def prompt_llm(
       model generates the answer directly after the closing tag.
 
     temperature/top_p/top_k accept None to use vLLM's defaults (1.0, 1.0, -1).
+    max_tokens may be a list to set a per-prompt budget (e.g. pass 2 remaining budgets).
 
     Returns (responses, stop_reasons, prompt_tokens, completion_tokens).
     responses and stop_reasons are nested lists of shape [task][sample].
@@ -60,7 +61,7 @@ def prompt_llm(
         # (add_generation_reasoning=False cannot be combined with think_prefix; thinkpack errors)
         texts = [
             thinkpack.apply_chat_template(
-                conv,
+                conversation=conv,
                 tokenizer=tokenizer,
                 think_prefix=tp,
                 response_prefix="",
@@ -70,7 +71,10 @@ def prompt_llm(
     else:
         # pass 1 / onepass: standard prompt with open tag appended
         texts = [
-            thinkpack.apply_chat_template(conv, tokenizer=tokenizer)
+            thinkpack.apply_chat_template(
+                conversation=conv,
+                tokenizer=tokenizer,
+            )
             for conv in conversations
         ]
 
@@ -80,26 +84,41 @@ def prompt_llm(
     else:
         eos_token_str = tokenizer.decode([tokenizer.eos_token_id])
 
-    # none values fall back to vllm defaults: temperature=1.0, top_p=1.0, top_k=-1
-    sampling_params = SamplingParams(
-        seed=seed,
-        n=samples,
-        temperature=temperature if temperature is not None else 1.0,
-        top_p=top_p if top_p is not None else 1.0,
-        top_k=top_k if top_k is not None else -1,
-        max_tokens=max_tokens,
-        min_tokens=min_tokens,
-        skip_special_tokens=True,
-        stop=[eos_token_str] + stop,
+    # shared kwargs for building SamplingParams (all prompts use the same sampling settings)
+    base_params: dict = {
+        "seed": seed,
+        "n": samples,
+        "temperature": temperature if temperature is not None else 1.0,
+        "top_p": top_p if top_p is not None else 1.0,
+        "top_k": top_k if top_k is not None else -1,
+        "min_tokens": min_tokens,
+        "skip_special_tokens": True,
+        "stop": [eos_token_str] + stop,
+    }
+
+    # when max_tokens is a list, each prompt gets its own SamplingParams with its own budget;
+    # this is used in pass 2 to enforce the overall token cap per-sample
+    per_prompt = isinstance(max_tokens, list)
+    shared_params = SamplingParams(
+        **base_params, max_tokens=None if per_prompt else max_tokens
     )
 
     # process in chunks to avoid the vllm 0.7.x async-stopped scheduler bug
     all_completions = []
     for start in range(0, len(texts), chunk_size):
+        chunk_texts = texts[start : start + chunk_size]
+        if per_prompt:
+            assert isinstance(max_tokens, list)
+            chunk_params: list[SamplingParams] = [
+                SamplingParams(**base_params, max_tokens=mt)
+                for mt in max_tokens[start : start + chunk_size]
+            ]
+        else:
+            chunk_params = shared_params
         all_completions.extend(
             llm.generate(
-                prompts=texts[start : start + chunk_size],
-                sampling_params=sampling_params,
+                prompts=chunk_texts,
+                sampling_params=chunk_params,
                 use_tqdm=True,
             )
         )
