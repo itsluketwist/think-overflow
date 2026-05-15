@@ -13,8 +13,7 @@ CPU_MEMORY="96G"
 
 models=(
     "qwen3-8b"
-    "qwen3.5-9b"
-    "olmo-3-7b-think"
+    "olmo-3-7b"
     "or-7b"
     "ocr-7b"
     "ministral-8b"
