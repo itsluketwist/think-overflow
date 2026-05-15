@@ -57,16 +57,14 @@ def _run_onepass(
     """Run single-pass unconstrained inference over a list of prompts.
 
     Returns details: a [task][sample] list of dicts with keys:
-    text, stop_reason, truncated, transition, prompt_tokens_1, completion_tokens_1,
+    text, stop_reason, truncated, transition, prompt, prompt_tokens_1, completion_tokens_1,
     prompt_tokens_2, completion_tokens_2. Pass 2 keys are None for onepass.
     transition is always False for onepass (no forced cap).
     truncated is True when stop_reason is "length" (hit the token limit).
     """
-    n_prompts = len(prompts)
-
     log("    Generating responses (onepass)...")
     with log_timer("generation"):
-        responses, stop_reasons, prompt_toks, completion_toks = prompt_llm(
+        results = prompt_llm(
             llm=llm,
             tokenizer=tokenizer,
             prompts=prompts,
@@ -83,18 +81,19 @@ def _run_onepass(
         )
 
     details: list[list[dict]] = []
-    for i in range(n_prompts):
+    for r in results:
         task_details: list[dict] = []
         for j in range(samples):
-            stop_reason = stop_reasons[i][j]
+            stop_reason = r["stop_reasons"][j]
             task_details.append(
                 {
-                    "text": responses[i][j],
+                    "prompt": r["prompt"],
+                    "text": r["responses"][j],
                     "stop_reason": stop_reason,
                     "truncated": stop_reason == "length",  # hit model token limit
                     "transition": False,  # no forced cap in onepass
-                    "prompt_tokens_1": prompt_toks[i],
-                    "completion_tokens_1": completion_toks[i][j],
+                    "prompt_tokens_1": r["prompt_tokens"],
+                    "completion_tokens_1": r["completion_tokens"][j],
                     "prompt_tokens_2": None,
                     "completion_tokens_2": None,
                 },
@@ -126,8 +125,8 @@ def _run_twopass(
     block is closed before pass 2 generates the answer.
 
     Returns details: a [task][sample] list of dicts with keys:
-    text, stop_reason, truncated, transition, prompt_tokens_1, completion_tokens_1,
-    prompt_tokens_2, completion_tokens_2.
+    text, stop_reason, truncated, transition, prompt_1, prompt_2, prompt_tokens_1,
+    completion_tokens_1, prompt_tokens_2, completion_tokens_2.
     transition=True means the reasoning was forcibly capped (pass 1 hit max_think_tokens).
     truncated=True means pass 2 answer generation hit the token limit.
     """
@@ -138,12 +137,7 @@ def _run_twopass(
     # --- pass 1: generate reasoning, stopping at close tag or max_think_tokens ---
     log("    Pass 1: generating capped reasoning...")
     with log_timer("pass 1"):
-        (
-            step1_responses,
-            step1_reasons,
-            p1_prompt_toks,
-            p1_reason_toks,
-        ) = prompt_llm(
+        p1 = prompt_llm(
             llm=llm,
             tokenizer=tokenizer,
             prompts=prompts,
@@ -161,10 +155,7 @@ def _run_twopass(
 
     # count how many reasoning traces were cut short and triggered a transition
     transition_count = sum(
-        1
-        for task_reasons in step1_reasons
-        for reason in task_reasons
-        if reason == "length"
+        1 for r in p1 for reason in r["stop_reasons"] if reason == "length"
     )
     log(
         f"    Transition: {transition_count}/{n_prompts * samples} "
@@ -178,8 +169,8 @@ def _run_twopass(
     all_think_prefixes_flat: list[str] = []
     all_transition_flat: list[bool] = []
 
-    for step1_task_responses, step1_task_reasons in zip(step1_responses, step1_reasons):
-        for response, reason in zip(step1_task_responses, step1_task_reasons):
+    for r in p1:
+        for response, reason in zip(r["responses"], r["stop_reasons"]):
             transition = bool(reason == "length")
             think_prefix = response.strip() + (overflow_suffix if transition else "")
             all_think_prefixes_flat.append(think_prefix)
@@ -189,6 +180,8 @@ def _run_twopass(
     flat_prompts = [p for p in prompts for _ in range(samples)]
 
     # compute per-sample remaining budget for pass 2: overall cap minus reasoning tokens used
+    # if pass 1 hit the length stop, use max_think_tokens (the cap) rather than the actual count
+    # — keeps budget accounting consistent with what was intended even if vllm fell slightly short
     p2_max_tokens: list[int] | None
     if max_tokens is not None:
         p2_max_tokens = [
@@ -197,8 +190,8 @@ def _run_twopass(
                 max_tokens
                 - (
                     max_think_tokens
-                    if step1_reasons[i][j] == "length"
-                    else p1_reason_toks[i][j]
+                    if p1[i]["stop_reasons"][j] == "length"
+                    else p1[i]["completion_tokens"][j]
                 ),
             )
             for i in range(n_prompts)
@@ -210,12 +203,7 @@ def _run_twopass(
     # --- pass 2: generate answers given the completed reasoning block ---
     log("    Pass 2: generating answers from reasoning...")
     with log_timer("pass 2"):
-        (
-            step2_responses,
-            step2_reasons,
-            p2_prompt_toks,
-            p2_answer_toks,
-        ) = prompt_llm(
+        p2 = prompt_llm(
             llm=llm,
             tokenizer=tokenizer,
             prompts=flat_prompts,
@@ -240,26 +228,29 @@ def _run_twopass(
         for j in range(samples):
             # flat index for this (prompt i, sample j) pair
             k = i * samples + j
-
-            answer = step2_responses[k][0]
-            stop_reason = step2_reasons[k][0]
             think_prefix = all_think_prefixes_flat[k]
+            stop_reason = p2[k]["stop_reasons"][0]
 
             # reconstruct the full <think>...</think>answer for storage and evaluation
-            full_text = f"{model_info.open_tag}\n{think_prefix}\n{model_info.close_tag}\n{answer}"
+            full_text = (
+                f"{model_info.open_tag}\n{think_prefix}\n{model_info.close_tag}\n"
+                f"{p2[k]['responses'][0]}"
+            )
 
             task_details.append(
                 {
+                    "prompt_1": p1[i]["prompt"],
+                    "prompt_2": p2[k]["prompt"],
                     "text": full_text,
                     "stop_reason": stop_reason,
                     "truncated": stop_reason == "length",  # answer generation hit limit
                     "transition": all_transition_flat[
                         k
                     ],  # reasoning was forcibly capped
-                    "prompt_tokens_1": p1_prompt_toks[i],
-                    "completion_tokens_1": p1_reason_toks[i][j],
-                    "prompt_tokens_2": p2_prompt_toks[k],
-                    "completion_tokens_2": p2_answer_toks[k][0],
+                    "prompt_tokens_1": p1[i]["prompt_tokens"],
+                    "completion_tokens_1": p1[i]["completion_tokens"][j],
+                    "prompt_tokens_2": p2[k]["prompt_tokens"],
+                    "completion_tokens_2": p2[k]["completion_tokens"][0],
                 },
             )
 
@@ -467,6 +458,7 @@ def run_inference(
                         "config": inference_config,
                         "eval_type": resolved_eval_type,
                         "samples": samples,
+                        "max_tokens": max_tokens,
                         "run_name": run_name,
                         "onepass": True,
                     },
@@ -507,13 +499,11 @@ def run_inference(
                         "config": inference_config,
                         "eval_type": resolved_eval_type,
                         "samples": samples,
+                        "max_tokens": max_tokens,
                         "max_think_tokens": max_think_tokens,
                         "overflow_suffix_key": overflow_suffix,
                         "overflow_suffix": overflow_suffix_str,
-                        "max_tokens": max_tokens,
                         "run_name": run_name,
-                        "transition_count": n_transition,
-                        "transition_rate": n_transition / max(n_total, 1),
                     },
                     "analysis": None,
                     "evaluation": None,
@@ -551,16 +541,8 @@ def run_inference(
             try:
                 data = load_json(file_path=str(file_path))
 
-                # support both the new unified "details" format and legacy separate keys
-                eval_details: list[list[dict]] | None
-                if "details" in data:
-                    eval_details = data["details"]
-                    responses = [[s["text"] for s in task] for task in eval_details]
-                else:
-                    # legacy format: responses=[text, finish_reason]
-                    raw = data["responses"]
-                    responses = [[entry[0] for entry in task] for task in raw]
-                    eval_details = None
+                eval_details: list[list[dict]] = data["details"]
+                responses = [[s["text"] for s in task] for task in eval_details]
 
                 dataset = load_dataset_records(
                     dataset=dataset_path,

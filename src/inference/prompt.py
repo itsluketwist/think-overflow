@@ -31,23 +31,25 @@ def prompt_llm(
     min_tokens: int = 32,
     stop: list[str] | None = None,
     chunk_size: int = 512,
-) -> tuple[list[list[str]], list[list[str]], list[int], list[list[int]]]:
+) -> list[dict]:
     """Prompt a vLLM model for responses.
 
     Uses thinkpack.apply_chat_template to build prompts in a model-agnostic way:
-    - No think_prefixes (pass 1 / onepass): open tag is added to steer the model
-      into its reasoning block. The model generates the reasoning.
+    - No think_prefixes (pass 1 / onepass): add_generation_reasoning=True forces
+      the opening think tag so the model cannot generate text before it.
     - With think_prefixes (pass 2): each prefix is injected as complete reasoning
-      inside the closed think block; add_generation_reasoning=False ensures the
-      model generates the answer directly after the closing tag.
+      inside the closed think block; add_generation_reasoning is not set (thinkpack
+      handles it automatically when think_prefix is provided).
 
     temperature/top_p/top_k accept None to use vLLM's defaults (1.0, 1.0, -1).
     max_tokens may be a list to set a per-prompt budget (e.g. pass 2 remaining budgets).
 
-    Returns (responses, stop_reasons, prompt_tokens, completion_tokens).
-    responses and stop_reasons are nested lists of shape [task][sample].
-    stop_reason is "stop" (hit EOS/stop string) or "length" (hit max_tokens).
-    prompt_tokens is shape [task]. completion_tokens is shape [task][sample].
+    Returns a list of dicts, one per prompt, each with keys:
+      prompt          — the formatted string sent to the model
+      responses       — list[str] of length samples
+      stop_reasons    — list[str] of length samples ("stop" or "length")
+      prompt_tokens   — int, number of tokens in the prompt
+      completion_tokens — list[int] of length samples
     """
     _check_sampling_params(samples=samples, temperature=temperature)
     stop = stop or []
@@ -58,7 +60,6 @@ def prompt_llm(
         # pass 2: inject reasoning then close the block so model generates only the answer.
         # response_prefix="" is what triggers thinkpack to add the close tag — without it the
         # block stays open and the model generates its own </think>, producing a duplicate.
-        # (add_generation_reasoning=False cannot be combined with think_prefix; thinkpack errors)
         texts = [
             thinkpack.apply_chat_template(
                 conversation=conv,
@@ -69,11 +70,13 @@ def prompt_llm(
             for conv, tp in zip(conversations, think_prefixes)
         ]
     else:
-        # pass 1 / onepass: standard prompt with open tag appended
+        # pass 1 / onepass: force the opening think tag so the model cannot produce
+        # text before it — without this some models generate a preamble first
         texts = [
             thinkpack.apply_chat_template(
                 conversation=conv,
                 tokenizer=tokenizer,
+                add_generation_reasoning=True,
             )
             for conv in conversations
         ]
@@ -109,7 +112,7 @@ def prompt_llm(
         chunk_texts = texts[start : start + chunk_size]
         if per_prompt:
             assert isinstance(max_tokens, list)
-            chunk_params: list[SamplingParams] = [
+            chunk_params: SamplingParams | list[SamplingParams] = [
                 SamplingParams(**base_params, max_tokens=mt)
                 for mt in max_tokens[start : start + chunk_size]
             ]
@@ -123,13 +126,13 @@ def prompt_llm(
             )
         )
 
-    stop_reasons = [
-        [output.finish_reason or "stop" for output in c.outputs]
-        for c in all_completions
+    return [
+        {
+            "prompt": texts[i],
+            "responses": [output.text for output in c.outputs],
+            "stop_reasons": [output.finish_reason or "stop" for output in c.outputs],
+            "prompt_tokens": len(c.prompt_token_ids),
+            "completion_tokens": [len(output.token_ids) for output in c.outputs],
+        }
+        for i, c in enumerate(all_completions)
     ]
-    prompt_tokens = [len(c.prompt_token_ids) for c in all_completions]
-    completion_tokens = [
-        [len(output.token_ids) for output in c.outputs] for c in all_completions
-    ]
-    responses = [[output.text for output in c.outputs] for c in all_completions]
-    return responses, stop_reasons, prompt_tokens, completion_tokens

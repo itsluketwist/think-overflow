@@ -53,6 +53,7 @@ def evaluate(
     parsed: list[list[ParsedResponse]] = thinkpack.parse(
         response=responses,
         tokenizer=tokenizer,
+        add_generation_reasoning=True,
     )
 
     # run the type-specific evaluator

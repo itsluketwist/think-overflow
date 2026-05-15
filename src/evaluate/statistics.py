@@ -85,7 +85,7 @@ def compute_reasoning_statistics(
         return empty
 
     # thinkpack computes reliability metrics macro-averaged across tasks
-    tp = thinkpack.compute_stats(parsed_responses)
+    tp = thinkpack.compute_stats(responses=parsed_responses)
 
     # transition and overflow rates from the details structure
     transition_rate = 0.0
