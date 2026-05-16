@@ -47,15 +47,18 @@ pip install -e .
 
 After [*installation*](#installation), use the `run` CLI to run inference. Two modes are available:
 
-- **`--onepass`** — single-pass unconstrained inference (baseline)
-- **`--max-think-tokens N`** — two-pass think-overflow inference with a reasoning cap
+- **onepass** (omit `--max-think-tokens`) — single-pass unconstrained inference (baseline)
+- **twopass** (`--max-think-tokens N`) — two-pass think-overflow inference with a reasoning cap
+
+`--max-tokens` sets the overall token budget: total generation tokens for onepass, or combined
+Pass 1 + Pass 2 tokens for twopass.
 
 ```shell
-# onepass baseline — full budget, greedy decoding
-run -m qwen3-8b -cp greedymax -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --onepass
+# onepass baseline — 32k budget, greedy decoding
+run -m qwen3-8b -cp greedymax --max-tokens 32768 -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i
 
-# two-pass think-overflow — 4096 reasoning token cap, greedy decoding
-run -m qwen3-8b -cp greedy -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --max-think-tokens 4096 --overflow-suffix formal
+# two-pass think-overflow — 32k total budget, 8k reasoning cap, greedy decoding
+run -m qwen3-8b -cp greedy --max-tokens 32768 --max-think-tokens 8192 --overflow-suffix formal -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i
 ```
 
 HPC job submission is handled via [`scripts/submit_job.sh`](scripts/submit_job.sh) — configure the
@@ -67,11 +70,11 @@ Use `--debug` to smoke-test a run locally: it picks one dataset per eval type, l
 5 samples, and writes output to `output/debug/` instead of the normal results directories.
 
 ```shell
-# debug onepass — model-default sampling, 3 samples per task
-run -m qwen3-1.7b -cp default -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --onepass --debug
+# debug onepass — greedy, 32k budget
+run -m qwen3-0b -cp greedy --max-tokens 4096 -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --debug
 
-# debug two-pass — greedy, 4096 token reasoning cap
-run -m qwen3-1.7b -cp greedy -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --max-think-tokens 4096 --overflow-suffix formal --debug
+# debug two-pass — greedy, 32k total budget, 8k reasoning cap
+run -m qwen3-0b -cp creative --max-tokens 32768 --max-think-tokens 8192 --overflow-suffix formal -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --debug
 ```
 
 ## *structure*
