@@ -230,13 +230,9 @@ def _run_twopass(
             k = i * samples + j
             stop_reason = p2[k]["stop_reasons"][0]
 
-            # split prompt_2 at the last open tag, append the answer; strip and record any spurious leading </think>.
+            # split prompt_2 at the last open tag and append the answer as-is.
             p2_response = p2[k]["responses"][0]
-            regenerated_close_tag = p2_response.startswith(model_info.close_tag)
-            if regenerated_close_tag:
-                p2_response = p2_response[len(model_info.close_tag) :]
-                if p2_response.startswith("\n"):
-                    p2_response = p2_response[1:]
+            regenerated_close_tag = p2_response.strip().startswith(model_info.close_tag)
             prompt_2_text = p2[k]["prompt"]
             last_open = prompt_2_text.rfind(model_info.open_tag)
             full_text = prompt_2_text[last_open:] + p2_response

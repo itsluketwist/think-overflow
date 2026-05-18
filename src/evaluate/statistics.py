@@ -79,6 +79,7 @@ def compute_reasoning_statistics(
         "empty_reasoning_rate": 0.0,
         "answer_rate": 0.0,
         "transition_rate": 0.0,
+        "regenerated_close_tag_rate": 0.0,
         "reasoning_overflow_rate": 0.0,
         "general_overflow_rate": 0.0,
         "answer_extracted_rate": 0.0,
@@ -94,6 +95,12 @@ def compute_reasoning_statistics(
     n = len(flat_details)
     # transition_rate: how often pass 1 was forcibly capped (twopass only; 0 for onepass)
     transition_rate = sum(s["transition"] for s in flat_details) / n if n else 0.0
+    # regenerated_close_tag_rate: how often pass 2 began with </think> (twopass only; 0 for onepass)
+    regenerated_close_tag_rate = (
+        sum(s.get("regenerated_close_tag", False) for s in flat_details) / n
+        if n
+        else 0.0
+    )
     # general_overflow_rate: how often the final generation hit the token limit
     general_overflow_rate = sum(s["truncated"] for s in flat_details) / n if n else 0.0
 
@@ -124,6 +131,7 @@ def compute_reasoning_statistics(
         f"    Reasoning: valid={tp.valid_reasoning_rate:.1%}, "
         f"missing={tp.missing_reasoning_rate:.1%}, "
         f"transition={transition_rate:.1%}, "
+        f"regenerated_close_tag={regenerated_close_tag_rate:.1%}, "
         f"reasoning_overflow={reasoning_overflow_rate:.1%}, "
         f"general_overflow={general_overflow_rate:.1%}, "
         f"extracted={answer_extracted_rate:.1%}",
@@ -139,6 +147,7 @@ def compute_reasoning_statistics(
         "answer_rate": tp.answer_rate,
         # our custom stats derived from the details structure
         "transition_rate": transition_rate,
+        "regenerated_close_tag_rate": regenerated_close_tag_rate,
         "reasoning_overflow_rate": reasoning_overflow_rate,
         "general_overflow_rate": general_overflow_rate,
         "answer_extracted_rate": answer_extracted_rate,
