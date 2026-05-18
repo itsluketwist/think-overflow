@@ -66,7 +66,7 @@ def prompt_llm(
                 tokenizer=tokenizer,
                 think_prefix=tp,
                 response_prefix="",
-            )
+            ).rstrip("\n")
             for conv, tp in zip(conversations, think_prefixes)
         ]
     else:

@@ -74,7 +74,7 @@ Use `--debug` to smoke-test a run locally: it picks one dataset per eval type, l
 run -m qwen3-0b -cp greedy --max-tokens 4096 -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --debug
 
 # debug two-pass — greedy, 32k total budget, 8k reasoning cap
-run -m qwen3-0b -cp creative --max-tokens 32768 --max-think-tokens 8192 --overflow-suffix formal -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --debug
+run -m qwen3-0b -cp creative --max-tokens 8192 --max-think-tokens 4096 --overflow-suffix formal -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --debug
 ```
 
 ## *structure*

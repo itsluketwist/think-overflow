@@ -228,14 +228,18 @@ def _run_twopass(
         for j in range(samples):
             # flat index for this (prompt i, sample j) pair
             k = i * samples + j
-            think_prefix = all_think_prefixes_flat[k]
             stop_reason = p2[k]["stop_reasons"][0]
 
-            # reconstruct the full <think>...</think>answer for storage and evaluation
-            full_text = (
-                f"{model_info.open_tag}\n{think_prefix}\n{model_info.close_tag}\n"
-                f"{p2[k]['responses'][0]}"
-            )
+            # split prompt_2 at the last open tag, append the answer; strip and record any spurious leading </think>.
+            p2_response = p2[k]["responses"][0]
+            regenerated_close_tag = p2_response.startswith(model_info.close_tag)
+            if regenerated_close_tag:
+                p2_response = p2_response[len(model_info.close_tag) :]
+                if p2_response.startswith("\n"):
+                    p2_response = p2_response[1:]
+            prompt_2_text = p2[k]["prompt"]
+            last_open = prompt_2_text.rfind(model_info.open_tag)
+            full_text = prompt_2_text[last_open:] + p2_response
 
             task_details.append(
                 {
@@ -247,6 +251,7 @@ def _run_twopass(
                     "transition": all_transition_flat[
                         k
                     ],  # reasoning was forcibly capped
+                    "regenerated_close_tag": regenerated_close_tag,  # model re-emitted </think>
                     "prompt_tokens_1": p1[i]["prompt_tokens"],
                     "completion_tokens_1": p1[i]["completion_tokens"][j],
                     "prompt_tokens_2": p2[k]["prompt_tokens"],
