@@ -5,7 +5,9 @@ Run from the repository root:
     python scripts/compute_stats.py --update  # recompute everything
 
 Results are saved to output/token_stats/{model_key}.json — one file per model,
-with all datasets nested under a "datasets" key.
+with all datasets nested under a "datasets" key. Each dataset key encodes both
+the dataset name and the token budget (e.g. "evalplus_greedy_mx32768"), so all
+budget sizes (8k, 16k, 32k) coexist in the same file.
 Add new models or datasets then re-run to extend.
 """
 
@@ -37,16 +39,6 @@ SERIES: dict[str, dict] = {
         "hf_path": "Qwen/Qwen3-8B",
         "file_suffix": "_onepass",
     },
-    "qwen3_14b": {
-        "model_key": "qwen3-14b",
-        "hf_path": "Qwen/Qwen3-14B",
-        "file_suffix": "_onepass",
-    },
-    "qwen3_5_9b": {
-        "model_key": "qwen3.5-9b",
-        "hf_path": "Qwen/Qwen3.5-9B",
-        "file_suffix": "_onepass",
-    },
     "olmo_3_7b": {
         "model_key": "olmo-3-7b",
         "hf_path": "allenai/OLMo-3-7B-Think",
@@ -62,30 +54,33 @@ SERIES: dict[str, dict] = {
         "hf_path": "mistralai/Ministral-3-8B-Reasoning-2512",
         "file_suffix": "_onepass",
     },
-    "ocr_7b": {
-        "model_key": "ocr-7b",
-        "hf_path": "nvidia/OpenCodeReasoning-Nemotron-1.1-7B",
-        "file_suffix": "_onepass",
-    },
     "or_7b": {
         "model_key": "or-7b",
         "hf_path": "nvidia/OpenReasoning-Nemotron-7B",
         "file_suffix": "_onepass",
     },
+    "ocr_7b": {
+        "model_key": "ocr-7b",
+        "hf_path": "nvidia/OpenCodeReasoning-Nemotron-1.1-7B",
+        "file_suffix": "_onepass",
+    },
 }
 
-# datasets: label → (inference file stem, prompt jsonl path relative to data/)
-# stems use the "greedy_mx32768" config so the combined filename is {stem}_onepass.json
+# token budgets to compute stats for — each produces a separate run_key in the output
+BUDGETS: list[int] = [32768, 16384, 8192]
+
+# datasets: label → (inference file stem base, prompt jsonl path relative to data/)
+# the budget is appended at runtime (e.g. "evalplus_greedy_mx" + "32768")
 DATASETS: dict[str, tuple[str, str]] = {
-    "evalplus": ("evalplus_greedy_mx32768", "code/evalplus.jsonl"),
-    "livecodebench": ("livecodebench_greedy_mx32768", "code/livecodebench.jsonl"),
-    "bigcodebench": ("bigcodebench_greedy_mx32768", "code/bigcodebench.jsonl"),
-    "code_contests": ("code_contests_greedy_mx32768", "code/code_contests.jsonl"),
-    "cruxeval_i": ("cruxeval_i_greedy_mx32768", "crux/cruxeval_i.jsonl"),
-    "cruxeval_o": ("cruxeval_o_greedy_mx32768", "crux/cruxeval_o.jsonl"),
-    "gsm8k": ("gsm8k_greedy_mx32768", "math/gsm8k.jsonl"),
-    "math500": ("math500_greedy_mx32768", "math/math500.jsonl"),
-    "gpqa": ("gpqa_greedy_mx32768", "reasoning/gpqa.jsonl"),
+    "evalplus": ("evalplus_greedy_mx", "code/evalplus.jsonl"),
+    "livecodebench": ("livecodebench_greedy_mx", "code/livecodebench.jsonl"),
+    "bigcodebench": ("bigcodebench_greedy_mx", "code/bigcodebench.jsonl"),
+    "code_contests": ("code_contests_greedy_mx", "code/code_contests.jsonl"),
+    "cruxeval_i": ("cruxeval_i_greedy_mx", "crux/cruxeval_i.jsonl"),
+    "cruxeval_o": ("cruxeval_o_greedy_mx", "crux/cruxeval_o.jsonl"),
+    "gsm8k": ("gsm8k_greedy_mx", "math/gsm8k.jsonl"),
+    "math500": ("math500_greedy_mx", "math/math500.jsonl"),
+    "gpqa": ("gpqa_greedy_mx", "reasoning/gpqa.jsonl"),
 }
 
 
@@ -134,19 +129,20 @@ def load_pass_at_1(
 def compute_series_dataset(
     series_key: str,
     dataset_label: str,
+    budget: int,
     tokenizer: AutoTokenizer,
 ) -> dict | None:
-    """Compute token budget statistics for one (series, dataset) pair.
+    """Compute token budget statistics for one (series, dataset, budget) triple.
 
     Returns None if the inference file is missing, otherwise returns a stats dict
     with keys: reasoning_token_counts, budget_pct, pass_at_1, max_tokens,
     source_file, source_mtime.
     """
     cfg = SERIES[series_key]
-    ds_file, _ = DATASETS[dataset_label]
+    ds_base, _ = DATASETS[dataset_label]
 
     # e.g. "evalplus_greedy_mx32768_onepass"
-    file_stem = f"{ds_file}{cfg['file_suffix']}"
+    file_stem = f"{ds_base}{budget}{cfg['file_suffix']}"
     source_path = INFER_DIR / cfg["model_key"] / f"{file_stem}.json"
 
     if not source_path.exists():
@@ -253,24 +249,26 @@ def main() -> None:
                 existing = json.load(f).get("datasets", {})
 
         datasets: dict[str, dict] = {}
-        for dataset_label in DATASETS:
-            # use the inference file stem as the key (e.g. "evalplus_greedy_mx32768")
-            # so the key captures the dataset, config, and token budget
-            ds_file, _ = DATASETS[dataset_label]
-            run_key = ds_file
+        for budget in BUDGETS:
+            for dataset_label in DATASETS:
+                # use the full inference file stem as the key (e.g. "evalplus_greedy_mx32768")
+                # so the key captures the dataset, config, and token budget
+                ds_base, _ = DATASETS[dataset_label]
+                run_key = f"{ds_base}{budget}"
 
-            if run_key in existing and not args.update:
-                print(f"  [skip] {series_key}/{run_key} (already exists)")
-                datasets[run_key] = existing[run_key]
-                continue
+                if run_key in existing and not args.update:
+                    print(f"  [skip] {series_key}/{run_key} (already exists)")
+                    datasets[run_key] = existing[run_key]
+                    continue
 
-            result = compute_series_dataset(
-                series_key=series_key,
-                dataset_label=dataset_label,
-                tokenizer=tokenizer,
-            )
-            if result is not None:
-                datasets[run_key] = result
+                result = compute_series_dataset(
+                    series_key=series_key,
+                    dataset_label=dataset_label,
+                    budget=budget,
+                    tokenizer=tokenizer,
+                )
+                if result is not None:
+                    datasets[run_key] = result
 
         # save all datasets for this model in one pretty-printed file
         save_json(
