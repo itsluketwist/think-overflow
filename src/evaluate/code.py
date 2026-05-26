@@ -1,5 +1,6 @@
 """Evaluation of code responses by executing tests."""
 
+import os
 import platform
 import resource
 import signal
@@ -244,7 +245,6 @@ def _run_pytest_tests(
 # add new dataset stems here when they need offline evaluation.
 _OFFICIAL_HARNESS_DATASETS: frozenset[str] = frozenset(
     {
-        "bigcodebench",
         "codereval",
         "editbench",
     }
@@ -299,6 +299,10 @@ def evaluate_code(
     Pass dataset_name (file stem) to skip test execution for benchmarks listed in
     _OFFICIAL_HARNESS_DATASETS — those are scored offline via their official harnesses.
 
+    BigCodeBench requires a dedicated venv with pinned libraries (numpy, pandas, scipy,
+    etc.). Set the BCB_PYTHON environment variable to the path of that venv's interpreter;
+    if unset, the current interpreter is used and imports may fail.
+
     Returns a dict with pass_at_1, pass_at_1_list, pass_at_k, k, total, and a per-task breakdown.
     """
     results = []
@@ -309,6 +313,11 @@ def evaluate_code(
 
     # skip test execution for datasets that use official external harnesses
     skip_execution = dataset_name in _OFFICIAL_HARNESS_DATASETS
+
+    # bigcodebench requires its own venv for pinned library versions; read path from env
+    python_executable: str | None = (
+        os.environ.get("BCB_PYTHON") if dataset_name == "bigcodebench" else None
+    )
 
     for sample_parsed, record in zip(responses, records):
         sample_results: list[dict[str, Any]] = []
@@ -331,6 +340,7 @@ def evaluate_code(
                 success, output = _evaluate_response(
                     response=p.answer,
                     record=record,
+                    python_executable=python_executable,
                 )
             else:
                 success, output = False, None
@@ -342,6 +352,7 @@ def evaluate_code(
                 reasoning_success, _ = _evaluate_response(
                     response=p.reasoning,
                     record=record,
+                    python_executable=python_executable,
                 )
                 correct_in_reasoning = reasoning_success
 
