@@ -14,9 +14,7 @@ build/
 .env
 
 # harness input/output (generated artefacts, not tracked)
-harness/bigcodebench/
-harness/codereval/
-harness/editbench/
+harness/
 
 # editor
 .DS_Store
