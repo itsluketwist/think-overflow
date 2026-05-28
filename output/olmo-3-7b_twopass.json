@@ -396,18 +396,18 @@
         }
     },
     "code/bigcodebench_greedy_mx32768_th8192_base": {
-        "pass_at_1": 0.0,
+        "pass_at_1": 0.3394736842105263,
         "pass_at_1_ci": [
-            0.0,
-            0.0033583839710222474
+            0.31256565404391523,
+            0.36745993238888663
         ],
         "pass_at_1_list": [
-            0.0
+            0.3394736842105263
         ],
-        "pass_at_k": 0.0,
+        "pass_at_k": 0.3394736842105263,
         "pass_at_k_ci": [
-            0.0,
-            0.0033583839710222474
+            0.31256565404391523,
+            0.36745993238888663
         ],
         "k": 1,
         "total": 1140,
@@ -418,10 +418,10 @@
             "truncated_reasoning_rate": 0.0,
             "empty_reasoning_rate": 0.0,
             "answer_rate": 1.0,
-            "transition_rate": 0.14736842105263157,
+            "transition_rate": 0.1543859649122807,
             "regenerated_close_tag_rate": 0.0,
             "reasoning_overflow_rate": 0.0,
-            "general_overflow_rate": 0.0017543859649122807,
+            "general_overflow_rate": 0.0035087719298245615,
             "answer_extracted_rate": 1.0
         },
         "token_statistics": {
@@ -1044,18 +1044,18 @@
         }
     },
     "code/bigcodebench_greedy_mx32768_th16384_base": {
-        "pass_at_1": 0.0,
+        "pass_at_1": 0.32894736842105265,
         "pass_at_1_ci": [
-            0.0,
-            0.0033583839710222474
+            0.30228833784509834,
+            0.35675531982919884
         ],
         "pass_at_1_list": [
-            0.0
+            0.32894736842105265
         ],
-        "pass_at_k": 0.0,
+        "pass_at_k": 0.32894736842105265,
         "pass_at_k_ci": [
-            0.0,
-            0.0033583839710222474
+            0.30228833784509834,
+            0.35675531982919884
         ],
         "k": 1,
         "total": 1140,
@@ -1066,10 +1066,10 @@
             "truncated_reasoning_rate": 0.0,
             "empty_reasoning_rate": 0.0,
             "answer_rate": 1.0,
-            "transition_rate": 0.017543859649122806,
+            "transition_rate": 0.02631578947368421,
             "regenerated_close_tag_rate": 0.0,
             "reasoning_overflow_rate": 0.0,
-            "general_overflow_rate": 0.002631578947368421,
+            "general_overflow_rate": 0.0017543859649122807,
             "answer_extracted_rate": 1.0
         },
         "token_statistics": {

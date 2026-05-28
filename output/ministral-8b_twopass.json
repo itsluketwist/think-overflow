@@ -720,18 +720,18 @@
         }
     },
     "code/bigcodebench_greedy_mx32768_th12288_base": {
-        "pass_at_1": 0.0,
+        "pass_at_1": 0.4,
         "pass_at_1_ci": [
-            0.0,
-            0.0033583839710222474
+            0.3719434989289586,
+            0.42872817786524586
         ],
         "pass_at_1_list": [
-            0.0
+            0.4
         ],
-        "pass_at_k": 0.0,
+        "pass_at_k": 0.4,
         "pass_at_k_ci": [
-            0.0,
-            0.0033583839710222474
+            0.3719434989289586,
+            0.42872817786524586
         ],
         "k": 1,
         "total": 1140,
@@ -742,10 +742,10 @@
             "truncated_reasoning_rate": 0.0,
             "empty_reasoning_rate": 0.0,
             "answer_rate": 1.0,
-            "transition_rate": 0.10526315789473684,
+            "transition_rate": 0.10789473684210527,
             "regenerated_close_tag_rate": 0.0,
             "reasoning_overflow_rate": 0.0,
-            "general_overflow_rate": 0.03684210526315789,
+            "general_overflow_rate": 0.037719298245614034,
             "answer_extracted_rate": 1.0
         },
         "token_statistics": {
@@ -1368,18 +1368,18 @@
         }
     },
     "code/bigcodebench_greedy_mx32768_th20480_base": {
-        "pass_at_1": 0.0,
+        "pass_at_1": 0.3991228070175439,
         "pass_at_1_ci": [
-            0.0,
-            0.0033583839710222474
+            0.3710796401721428,
+            0.42784354255885293
         ],
         "pass_at_1_list": [
-            0.0
+            0.3991228070175439
         ],
-        "pass_at_k": 0.0,
+        "pass_at_k": 0.3991228070175439,
         "pass_at_k_ci": [
-            0.0,
-            0.0033583839710222474
+            0.3710796401721428,
+            0.42784354255885293
         ],
         "k": 1,
         "total": 1140,
@@ -1390,7 +1390,7 @@
             "truncated_reasoning_rate": 0.0,
             "empty_reasoning_rate": 0.0,
             "answer_rate": 1.0,
-            "transition_rate": 0.09824561403508772,
+            "transition_rate": 0.10263157894736842,
             "regenerated_close_tag_rate": 0.0,
             "reasoning_overflow_rate": 0.0,
             "general_overflow_rate": 0.04298245614035088,
