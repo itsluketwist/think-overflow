@@ -260,6 +260,85 @@ def _run_twopass(
     return details
 
 
+def _run_nothink(
+    llm: LLM,
+    tokenizer: Any,
+    prompts: list[str],
+    samples: int,
+    seed: int,
+    temperature: float | None,
+    top_p: float | None,
+    top_k: int | None,
+    max_tokens: int | None,
+    chunk_size: int,
+) -> list[list[dict]]:
+    """Run nothink inference: inject an empty <think></think> block then generate the answer.
+
+    No reasoning pass is performed. Each prompt receives an empty think_prefix so
+    thinkpack closes the block immediately, forcing the model to answer without reasoning.
+
+    Returns details: a [task][sample] list of dicts with keys:
+    text, stop_reason, truncated, transition, prompt, prompt_tokens_1, completion_tokens_1,
+    prompt_tokens_2, completion_tokens_2. Pass 1 keys are None (no reasoning pass).
+    transition is always False. regenerated_close_tag flags if the model re-emitted </think>.
+    """
+    model_info = thinkpack.get_model_info(tokenizer)
+
+    # empty string as think_prefix causes thinkpack to produce <think></think>,
+    # preventing the model from reasoning at all before answering
+    empty_prefixes = ["" for _ in prompts]
+
+    log("    Generating answers with empty think block (nothink)...")
+    with log_timer("generation"):
+        results = prompt_llm(
+            llm=llm,
+            tokenizer=tokenizer,
+            prompts=prompts,
+            samples=samples,
+            think_prefixes=empty_prefixes,
+            seed=seed,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            max_tokens=max_tokens,
+            min_tokens=1,
+            stop=None,
+            chunk_size=chunk_size,
+        )
+
+    details: list[list[dict]] = []
+    for r in results:
+        task_details: list[dict] = []
+        for j in range(samples):
+            stop_reason = r["stop_reasons"][j]
+            response = r["responses"][j]
+
+            # reconstruct full text from the injected <think></think> block onward,
+            # same approach as twopass: find the last open tag in the prompt
+            prompt_text = r["prompt"]
+            regenerated_close_tag = response.strip().startswith(model_info.close_tag)
+            last_open = prompt_text.rfind(model_info.open_tag)
+            full_text = prompt_text[last_open:] + response
+
+            task_details.append(
+                {
+                    "prompt": r["prompt"],
+                    "text": full_text,
+                    "stop_reason": stop_reason,
+                    "truncated": stop_reason == "length",
+                    "transition": False,  # no reasoning cap — no transition possible
+                    "regenerated_close_tag": regenerated_close_tag,
+                    "prompt_tokens_1": None,
+                    "completion_tokens_1": None,
+                    "prompt_tokens_2": r["prompt_tokens"],
+                    "completion_tokens_2": r["completion_tokens"][j],
+                },
+            )
+        details.append(task_details)
+
+    return details
+
+
 def run_inference(
     model: str,
     model_config: str,
@@ -274,27 +353,42 @@ def run_inference(
     update: bool,
     debug: bool = False,
 ) -> None:
-    """Run two-pass or onepass inference with explicit configuration arguments.
+    """Run two-pass, onepass, or nothink inference with explicit configuration arguments.
 
     The overflow_suffix argument is a key from _OVERFLOW_SUFFIXES (e.g. 'formal'),
     not the resolved string. When max_think_tokens is None, runs onepass (unconstrained).
+    When max_think_tokens is 0, runs nothink (empty think block, no reasoning pass).
     """
     # resolve suffix key to the actual string appended to truncated reasoning
     overflow_suffix_str: str = _OVERFLOW_SUFFIXES[overflow_suffix]
 
-    # run name encodes the mode and token budgets for unique, readable output filenames
+    # run name encodes the mode and token budgets for unique, readable output filenames.
+    # output_subdir separates results by mode; results_suffix names the summary file.
     if max_think_tokens is None:
         run_name = f"mx{max_tokens}_onepass"
+        output_subdir = "onepass"
+        results_suffix = "_onepass"
+    elif max_think_tokens == 0:
+        run_name = f"mx{max_tokens}_nothink"
+        output_subdir = "nothink"
+        results_suffix = "_nothink"
     else:
         run_name = f"mx{max_tokens}_th{max_think_tokens}_{overflow_suffix}"
+        output_subdir = "twopass"
+        results_suffix = "_twopass"
+
+    if max_think_tokens == 0:
+        mode_str = "nothink (empty think block)"
+    elif max_think_tokens is None:
+        mode_str = "onepass (unconstrained)"
+    else:
+        mode_str = "two-pass overflow"
 
     log_header("INFERENCE")
     log(f"Model: {model}")
     log(f"Config: {config_file} [{config_profile}]")
-    log(
-        f"Mode: {'onepass (unconstrained)' if max_think_tokens is None else 'two-pass overflow'}"
-    )
-    if max_think_tokens is not None:
+    log(f"Mode: {mode_str}")
+    if max_think_tokens is not None and max_think_tokens > 0:
         log(f"Max think tokens: {max_think_tokens}")
         log(f"Overflow suffix: {overflow_suffix} ({repr(overflow_suffix_str)})")
     log(f"Run name: {run_name}")
@@ -352,8 +446,7 @@ def run_inference(
         # debug runs go to a fixed directory so they never pollute real results
         output_dir = Path(output) / "debug" / model
     else:
-        # onepass and two-pass results are kept in separate directories
-        output_subdir = "onepass" if max_think_tokens is None else "twopass"
+        # onepass, twopass, and nothink results are kept in separate directories
         output_dir = Path(output) / output_subdir / model
     output_dir.mkdir(parents=True, exist_ok=True)
     log(f"Output directory: {output_dir}")
@@ -470,6 +563,38 @@ def run_inference(
                 save_json(data=output_data, file_path=str(file_path))
                 log(f"    Saved to {file_path}")
 
+            elif max_think_tokens == 0:
+                details = _run_nothink(
+                    llm=llm,
+                    tokenizer=tokenizer,
+                    prompts=prompts,
+                    samples=samples,
+                    seed=inference_config.get("seed", 42),
+                    temperature=temperature,
+                    top_p=top_p,
+                    top_k=top_k,
+                    max_tokens=max_tokens,
+                    chunk_size=inference_config.get("chunk_size", 512),
+                )
+                output_data = {
+                    "metadata": {
+                        "model": model,
+                        "dataset": dataset_path,
+                        "config_profile": config_profile,
+                        "config": inference_config,
+                        "eval_type": resolved_eval_type,
+                        "samples": samples,
+                        "max_tokens": max_tokens,
+                        "run_name": run_name,
+                        "nothink": True,
+                    },
+                    "analysis": None,
+                    "evaluation": None,
+                    "details": details,
+                }
+                save_json(data=output_data, file_path=str(file_path))
+                log(f"    Saved to {file_path}")
+
             else:
                 details = _run_twopass(
                     llm=llm,
@@ -525,7 +650,6 @@ def run_inference(
 
     # summary file goes into the same root as the run (debug has its own subdir)
     summary_dir = Path(output) / "debug" if debug else Path(output)
-    results_suffix = "_onepass" if max_think_tokens is None else "_twopass"
     with json_results(
         directory=summary_dir,
         model=model,
@@ -600,11 +724,6 @@ def run_inference(
     # --- summary ---
     log_header("SUMMARY")
     log(f"Model: {model}")
-    mode_str = (
-        "onepass"
-        if max_think_tokens is None
-        else f"twopass (max_think_tokens={max_think_tokens})"
-    )
     log(f"Run: {run_name} ({mode_str})")
     log(f"Datasets evaluated: {len(eval_results)}/{len(all_datasets)}")
     log()

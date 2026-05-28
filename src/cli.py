@@ -76,7 +76,11 @@ parser.add_argument(
     "--max-think-tokens",
     type=int,
     default=None,
-    help="Token cap for Pass 1 reasoning. Suggested sweep: 2048, 4096, 8192, 16384.",
+    help=(
+        "Token cap for Pass 1 reasoning. Suggested sweep: 2048, 4096, 8192, 16384. "
+        "Use 0 to run nothink mode: injects an empty <think></think> block and skips "
+        "reasoning entirely, forcing the model to answer directly."
+    ),
 )
 
 parser.add_argument(

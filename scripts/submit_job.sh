@@ -37,9 +37,9 @@ eval_datasets=(
     "code/code_contests"
     "crux/cruxeval_i"
     "crux/cruxeval_o"
-    "reasoning/gpqa"
-    "math/gsm8k"
-    "math/math500"
+    # "reasoning/gpqa"
+    # "math/gsm8k"
+    # "math/math500"
 
     # "code/editbench"
     # "code/codereval"
@@ -58,7 +58,10 @@ max_tokens=32768
 # reasoning token caps to sweep (pass 1 max tokens); "" means onepass (no cap)
 max_think_tokens=(
     # onepass - run for all max_tokens
-    ""
+    # ""
+
+    # nothink - run with reasoning disabled (max_think_tokens=0)
+    # "0"
 
     # max_tokens = 8192
     # 2048     # = 1/4
@@ -116,19 +119,22 @@ echo
 
 for model in "${models[@]}"; do
     for tokens in "${max_think_tokens[@]}"; do
-        # "" sentinel means onepass (no reasoning cap); twopass sweeps over overflow suffixes
+        # determine mode: "" = onepass, "0" = nothink, N = twopass sweep over suffixes
         if [ -z "$tokens" ]; then
+            run_tag="onepass"
+            think_flags=""
             suffixes=("")
+        elif [ "$tokens" = "0" ]; then
+            run_tag="nothink"
+            think_flags="--max-think-tokens 0"
+            suffixes=("")  # no overflow suffix for nothink — no reasoning to truncate
         else
             suffixes=("${overflow_suffixes[@]}")
         fi
 
         for suffix in "${suffixes[@]}"; do
-            # build human-readable run tag and optional cli flags
-            if [ -z "$tokens" ]; then
-                run_tag="onepass"
-                think_flags=""
-            else
+            # build human-readable run tag and optional cli flags for twopass
+            if [ "$tokens" != "" ] && [ "$tokens" != "0" ]; then
                 run_tag="th${tokens}-${suffix}"
                 think_flags="--max-think-tokens $tokens --overflow-suffix $suffix"
             fi
