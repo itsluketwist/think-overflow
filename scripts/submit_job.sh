@@ -19,8 +19,9 @@ models=(
     "or-7b"
     "ocr-7b"
 
-    # "qwen3-14b"
-    # "ministral-14b"
+    "qwen3-14b"
+    "ministral-14b"
+
     # "or-14b"
     # "ocr-14b"
 )
@@ -37,6 +38,7 @@ eval_datasets=(
     "code/code_contests"
     "crux/cruxeval_i"
     "crux/cruxeval_o"
+
     # "reasoning/gpqa"
     # "math/gsm8k"
     # "math/math500"
@@ -58,10 +60,10 @@ max_tokens=32768
 # reasoning token caps to sweep (pass 1 max tokens); "" means onepass (no cap)
 max_think_tokens=(
     # onepass - run for all max_tokens
-    # ""
+    ""
 
     # nothink - run with reasoning disabled (max_think_tokens=0)
-    # "0"
+    "0"
 
     # max_tokens = 8192
     # 2048     # = 1/4
