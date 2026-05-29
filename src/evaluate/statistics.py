@@ -165,7 +165,6 @@ def aggregate_token_counts(details: list[list[dict]]) -> dict:
     flat = [s for task in details for s in task]
     if not flat:
         return {}
-    n = len(flat)
 
     def mean_optional(key: str) -> float | None:
         # exclude None values (onepass has no pass 2)
@@ -173,8 +172,8 @@ def aggregate_token_counts(details: list[list[dict]]) -> dict:
         return sum(vals) / len(vals) if vals else None
 
     return {
-        "mean_prompt_tokens_1": sum(s["prompt_tokens_1"] for s in flat) / n,
-        "mean_completion_tokens_1": sum(s["completion_tokens_1"] for s in flat) / n,
+        "mean_prompt_tokens_1": mean_optional("prompt_tokens_1"),
+        "mean_completion_tokens_1": mean_optional("completion_tokens_1"),
         "mean_prompt_tokens_2": mean_optional("prompt_tokens_2"),
         "mean_completion_tokens_2": mean_optional("completion_tokens_2"),
     }
