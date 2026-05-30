@@ -13,17 +13,13 @@ CPU_MEMORY="96G"
 
 models=(
     "qwen3-8b"
-    "ministral-8b"
+    "qwen3-14b"
+    "qwen3-32b"
+
     "olmo-3-7b"
     "llama-r1-8b"
     "or-7b"
     "ocr-7b"
-
-    "qwen3-14b"
-    "ministral-14b"
-
-    # "or-14b"
-    # "ocr-14b"
 )
 
 ###############################################################################
@@ -59,26 +55,20 @@ max_tokens=32768
 
 # reasoning token caps to sweep (pass 1 max tokens); "" means onepass (no cap)
 max_think_tokens=(
-    # onepass - run for all max_tokens
+    # onepass - baseline result with reasoning
     ""
 
-    # nothink - run with reasoning disabled (max_think_tokens=0)
+    # nothink - run with reasoning disabled
     "0"
 
-    # max_tokens = 8192
-    # 2048     # = 1/4
-    # 4096     # = 2/4
-    # 6144     # = 3/4
-
-    # max_tokens = 16384
-    # 4096     # = 1/4
-    # 8192     # = 2/4
-    # 12288    # = 3/4
-
     # max_tokens = 32768
-    # 8192     # = 1/4
-    # 16384    # = 2/4
-    # 24576    # = 3/4
+    4096     # = 1/8
+    8192     # = 2/8
+    12288    # = 3/8
+    16384    # = 4/8
+    20480    # = 5/8
+    24576    # = 6/8
+    28672    # = 7/8
 )
 
 # overflow suffix keys (see _OVERFLOW_SUFFIXES in src/run_infer.py):
