@@ -27,6 +27,13 @@ qwen3-14b:
     top_p: 0.95
     top_k: 20
 
+qwen3-32b:
+  model_path: "Qwen/Qwen3-32B"
+  defaults:
+    temperature: 0.6
+    top_p: 0.95
+    top_k: 20
+
 
 # --- OpenReasoning-Nemotron models (Nvidia, CC-BY-4.0) ---
 # context: 131,072 | generation: 64,000 (recommended)
@@ -34,13 +41,6 @@ qwen3-14b:
 
 or-7b:
   model_path: "nvidia/OpenReasoning-Nemotron-7B"
-  defaults:
-    temperature: 0.6
-    top_p: 0.95
-    top_k: -1
-
-or-14b:
-  model_path: "nvidia/OpenReasoning-Nemotron-14B"
   defaults:
     temperature: 0.6
     top_p: 0.95
@@ -55,32 +55,6 @@ ocr-7b:
   model_path: "nvidia/OpenCodeReasoning-Nemotron-1.1-7B"
   defaults:
     temperature: 0.6
-    top_p: 0.95
-    top_k: -1
-
-ocr-14b:
-  model_path: "nvidia/OpenCodeReasoning-Nemotron-1.1-14B"
-  defaults:
-    temperature: 0.6
-    top_p: 0.95
-    top_k: -1
-
-
-# --- Ministral reasoning models (Mistral, Apache 2.0) ---
-# context = max generation: 262,144 (no separate cap; input + output share the full window)
-# source: https://huggingface.co/mistralai/Ministral-3-8B-Reasoning-2512
-
-ministral-8b:
-  model_path: "mistralai/Ministral-3-8B-Reasoning-2512"
-  defaults:
-    temperature: 0.7
-    top_p: 0.95
-    top_k: -1
-
-ministral-14b:
-  model_path: "mistralai/Ministral-3-14B-Reasoning-2512"
-  defaults:
-    temperature: 0.7
     top_p: 0.95
     top_k: -1
 
