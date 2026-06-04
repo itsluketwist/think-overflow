@@ -16,7 +16,7 @@ Thinking-mode models (Qwen3, OLMo-Think, Nemotron) may spend their entire token 
 - Two-pass results: `output/twopass/{model}/{dataset}_{config}_{run}.json`
 - Per-model onepass summary: `output/{model}_onepass.json`
 - Per-model two-pass summary: `output/{model}_twopass.json`
-- Pre-computed token budget stats: `output/token_stats/{series_key}/{dataset}.json`
+- Pre-computed token budget stats: `output/token_stats/{model_key}.json`
 - Figures: `figures/`
 
 ## Code Style Notes
@@ -27,7 +27,7 @@ Thinking-mode models (Qwen3, OLMo-Think, Nemotron) may spend their entire token 
 
 - One CLI entry point: `run`
 - Two modes: `--onepass` (unconstrained, no token cap) and `--max-think-tokens N` (two-pass overflow)
-- Three config profiles in `config/inference.yaml`: `greedymax` (greedy, 32k), `greedy` (greedy, 28k), `default` (model-recommended sampling, 28k, samples=3)
+- Two config profiles in `config/inference.yaml`: `greedy` (greedy decoding, temp=0, samples=1), `default` (model-recommended sampling, samples=3)
 - Base models (with per-model default sampling params) registered in `config/models.yaml`
 - HPC job submission via `scripts/submit_job.sh`; mode auto-derived from whether `max_think_tokens` is set
 

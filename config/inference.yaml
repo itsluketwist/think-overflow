@@ -17,12 +17,3 @@ default:
   min_tokens: 32
   samples: 3  # more samples when non-deterministic
   chunk_size: 512
-
-creative:
-  seed: 42
-  temperature: 0.6
-  top_p: 0.95
-  top_k: -1
-  min_tokens: 32
-  samples: 3  # more samples when non-deterministic
-  chunk_size: 512

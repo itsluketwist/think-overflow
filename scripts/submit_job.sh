@@ -34,18 +34,11 @@ eval_datasets=(
     "code/code_contests"
     "crux/cruxeval_i"
     "crux/cruxeval_o"
-
-    # "reasoning/gpqa"
-    # "math/gsm8k"
-    # "math/math500"
-
-    # "code/editbench"
-    # "code/codereval"
 )
 
 # config profile for inference (from config/inference.yaml)
-# greedy, creative or default
 inference_config="greedy"
+# inference_config="default"
 
 # overall token budget (pass 1 + pass 2 combined for twopass, full generation for onepass)
 # max_tokens=null

@@ -1,4 +1,4 @@
-# **research-template**
+# **think-overflow**
 
 <div>
     <!-- badges from : https://shields.io/ -->
@@ -13,7 +13,10 @@
 
 ## *about*
 
-todo
+An empirical investigation into whether explicit reasoning helps **code generation** in small reasoning models.
+We study *reasoning overflow* — the failure mode where a model exhausts its entire token budget on internal reasoning without producing an answer — and examine how accuracy changes across different levels of reasoning budget.
+We evaluate 7 reasoning models across 6 code benchmarks (`EvalPlus`, `LiveCodeBench`, `BigCodeBench`, `CodeContests`, `CRUX-Input`,
+`CRUX-Output`).
 
 ## *installation*
 
@@ -28,7 +31,7 @@ python --version
 Now clone the repository code:
 
 ```shell
-git clone **redacted**
+git clone https://github.com/itsluketwist/think-overflow
 ```
 
 Once cloned, install the requirements locally in a virtual environment:
@@ -55,10 +58,10 @@ Pass 1 + Pass 2 tokens for twopass.
 
 ```shell
 # onepass baseline — 32k budget, greedy decoding
-run -m qwen3-8b -cp greedymax --max-tokens 32768 -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i
+run -m qwen3-8b -cp greedy --max-tokens 32768 -d code/evalplus,code/livecodebench,code/bigcodebench,code/code_contests,crux/cruxeval_i,crux/cruxeval_o
 
 # two-pass think-overflow — 32k total budget, 8k reasoning cap, greedy decoding
-run -m qwen3-8b -cp greedy --max-tokens 32768 --max-think-tokens 8192 --overflow-suffix formal -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i
+run -m qwen3-8b -cp greedy --max-tokens 32768 --max-think-tokens 8192 --overflow-suffix formal -d code/evalplus,code/livecodebench,code/bigcodebench,code/code_contests,crux/cruxeval_i,crux/cruxeval_o
 ```
 
 HPC job submission is handled via [`scripts/submit_job.sh`](scripts/submit_job.sh) — configure the
@@ -70,20 +73,24 @@ Use `--debug` to smoke-test a run locally: it picks one dataset per eval type, l
 5 samples, and writes output to `output/debug/` instead of the normal results directories.
 
 ```shell
-# debug onepass — greedy, 32k budget
-run -m qwen3-0b -cp greedy --max-tokens 4096 -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --debug
+# debug onepass — greedy, 4k budget
+run -m qwen3-0b -cp greedy --max-tokens 4096 -d code/evalplus,crux/cruxeval_i --debug
 
-# debug two-pass — greedy, 32k total budget, 8k reasoning cap
-run -m qwen3-0b -cp creative --max-tokens 8192 --max-think-tokens 4096 --overflow-suffix formal -d code/evalplus,math/gsm8k,reasoning/gpqa,crux/cruxeval_i --debug
+# debug two-pass — greedy, 8k total budget, 4k reasoning cap
+run -m qwen3-0b -cp greedy --max-tokens 8192 --max-think-tokens 4096 --overflow-suffix formal -d code/evalplus,crux/cruxeval_i --debug
 ```
 
 ## *structure*
 
-todo
-
-- [`data/`](data/) - The data used in the project.
-- [`output/`](output/) - The generated results.
-- [`src/`](src/) - The main project code.
+- [`config/`](config/) — inference profiles (`greedy`, `default`) and model registry
+- [`data/`](data/) — benchmark datasets (`code/`, `crux/`, `math/`, `reasoning/`) and download notebook
+- [`figures/`](figures/) — paper figures produced by the analysis notebooks
+- [`harness/`](harness/) — code-execution evaluation harnesses (BigCodeBench, EditBench, CodeReval)
+- [`notebooks/`](notebooks/) — analysis notebooks: `02_budget` (RQ1), `03_accuracy` (RQ2), `04_transition` (RQ3)
+- [`output/`](output/) — inference results (`onepass/`, `twopass/`), per-model summaries, and token budget statistics
+- [`scripts/`](scripts/) — HPC job submission (`submit_job.sh`) and token stats pre-computation (`compute_stats.py`)
+- [`src/`](src/) — main package: CLI entry point, vLLM inference, evaluation, and utilities
+- [`tests/`](tests/) — unit tests
 
 ## *development*
 

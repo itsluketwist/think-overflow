@@ -39,6 +39,16 @@ SERIES: dict[str, dict] = {
         "hf_path": "Qwen/Qwen3-8B",
         "file_suffix": "_onepass",
     },
+    "qwen3_14b": {
+        "model_key": "qwen3-14b",
+        "hf_path": "Qwen/Qwen3-14B",
+        "file_suffix": "_onepass",
+    },
+    "qwen3_32b": {
+        "model_key": "qwen3-32b",
+        "hf_path": "Qwen/Qwen3-32B",
+        "file_suffix": "_onepass",
+    },
     "olmo_3_7b": {
         "model_key": "olmo-3-7b",
         "hf_path": "allenai/OLMo-3-7B-Think",
@@ -47,11 +57,6 @@ SERIES: dict[str, dict] = {
     "llama_r1_8b": {
         "model_key": "llama-r1-8b",
         "hf_path": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
-        "file_suffix": "_onepass",
-    },
-    "ministral_8b": {
-        "model_key": "ministral-8b",
-        "hf_path": "mistralai/Ministral-3-8B-Reasoning-2512",
         "file_suffix": "_onepass",
     },
     "or_7b": {
@@ -78,9 +83,6 @@ DATASETS: dict[str, tuple[str, str]] = {
     "code_contests": ("code_contests_greedy_mx", "code/code_contests.jsonl"),
     "cruxeval_i": ("cruxeval_i_greedy_mx", "crux/cruxeval_i.jsonl"),
     "cruxeval_o": ("cruxeval_o_greedy_mx", "crux/cruxeval_o.jsonl"),
-    "gsm8k": ("gsm8k_greedy_mx", "math/gsm8k.jsonl"),
-    "math500": ("math500_greedy_mx", "math/math500.jsonl"),
-    "gpqa": ("gpqa_greedy_mx", "reasoning/gpqa.jsonl"),
 }
 
 
