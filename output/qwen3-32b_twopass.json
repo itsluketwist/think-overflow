@@ -1295,7 +1295,7 @@
             "mean_completion_tokens_2": 33.85625
         }
     },
-    "code/evalplus_greedy_mx32768_th28672_base": {
+    "code/evalplus_greedy_mx32768_th28762_base": {
         "pass_at_1": 0.5276752767527675,
         "pass_at_1_ci": [
             0.4855989092721712,
@@ -1331,7 +1331,7 @@
             "mean_completion_tokens_2": 601.2878228782288
         }
     },
-    "code/livecodebench_greedy_mx32768_th28672_base": {
+    "code/livecodebench_greedy_mx32768_th28762_base": {
         "pass_at_1": 0.5321637426900585,
         "pass_at_1_ci": [
             0.4792181775730474,
@@ -1367,7 +1367,7 @@
             "mean_completion_tokens_2": 726.0877192982456
         }
     },
-    "code/bigcodebench_greedy_mx32768_th28672_base": {
+    "code/bigcodebench_greedy_mx32768_th28762_base": {
         "pass_at_1": 0.4885964912280702,
         "pass_at_1_ci": [
             0.4596665174092732,
@@ -1403,7 +1403,7 @@
             "mean_completion_tokens_2": 463.72017543859647
         }
     },
-    "code/code_contests_greedy_mx32768_th28672_base": {
+    "code/code_contests_greedy_mx32768_th28762_base": {
         "pass_at_1": 0.5575757575757576,
         "pass_at_1_ci": [
             0.4813374248604851,
@@ -1439,7 +1439,7 @@
             "mean_completion_tokens_2": 916.6909090909091
         }
     },
-    "crux/cruxeval_i_greedy_mx32768_th28672_base": {
+    "crux/cruxeval_i_greedy_mx32768_th28762_base": {
         "pass_at_1": 0.94375,
         "pass_at_1_ci": [
             0.9255611385738006,
@@ -1475,7 +1475,7 @@
             "mean_completion_tokens_2": 36.9625
         }
     },
-    "crux/cruxeval_o_greedy_mx32768_th28672_base": {
+    "crux/cruxeval_o_greedy_mx32768_th28762_base": {
         "pass_at_1": 0.94625,
         "pass_at_1_ci": [
             0.928381925427825,
