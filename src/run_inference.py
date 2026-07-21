@@ -42,6 +42,22 @@ _OVERFLOW_SUFFIXES: dict[str, str] = {
 }
 
 
+# named prompt suffixes — appended to every user prompt (onepass only) to test whether
+# prompt-engineering shortens reasoning. "none" is the baseline (nothing appended).
+_PROMPT_SUFFIXES: dict[str, str] = {
+    "none": "",
+    "concise": (
+        "\n\nKeep your reasoning brief and to the point, then make sure you stop "
+        "reasoning and provide a complete final answer."
+    ),
+    "aspects": (
+        "\n\nDo not reason step by step. Instead, briefly consider the important "
+        "aspects of the problem — such as the inputs, outputs, edge cases, and any "
+        "interesting design choices — then stop and give your final answer."
+    ),
+}
+
+
 def _run_onepass(
     llm: LLM,
     tokenizer: Any,
@@ -350,6 +366,7 @@ def run_inference(
     max_think_tokens: int | None,
     max_tokens: int | None,
     overflow_suffix: str,
+    prompt_suffix: str,
     update: bool,
     debug: bool = False,
 ) -> None:
@@ -358,14 +375,28 @@ def run_inference(
     The overflow_suffix argument is a key from _OVERFLOW_SUFFIXES (e.g. 'formal'),
     not the resolved string. When max_think_tokens is None, runs onepass (unconstrained).
     When max_think_tokens is 0, runs nothink (empty think block, no reasoning pass).
+    The prompt_suffix argument is a key from _PROMPT_SUFFIXES; it appends an instruction
+    to every user prompt and is only valid in onepass mode.
     """
     # resolve suffix key to the actual string appended to truncated reasoning
     overflow_suffix_str: str = _OVERFLOW_SUFFIXES[overflow_suffix]
 
+    # resolve prompt suffix key to the actual string appended to every user prompt
+    prompt_suffix_str: str = _PROMPT_SUFFIXES[prompt_suffix]
+
+    # prompt suffixes are an onepass-only experiment — reject other modes explicitly
+    if prompt_suffix != "none" and max_think_tokens is not None:
+        raise ValueError(
+            f"prompt_suffix ({prompt_suffix!r}) is only supported in onepass mode "
+            f"(omit --max-think-tokens); got max_think_tokens={max_think_tokens}.",
+        )
+
     # run name encodes the mode and token budgets for unique, readable output filenames.
     # output_subdir separates results by mode; results_suffix names the summary file.
     if max_think_tokens is None:
-        run_name = f"mx{max_tokens}_onepass"
+        # append the prompt-suffix key only when set so the baseline filename is unchanged
+        suffix_tag = "" if prompt_suffix == "none" else f"_{prompt_suffix}"
+        run_name = f"mx{max_tokens}_onepass{suffix_tag}"
         output_subdir = "onepass"
         results_suffix = "_onepass"
     elif max_think_tokens == 0:
@@ -391,6 +422,8 @@ def run_inference(
     if max_think_tokens is not None and max_think_tokens > 0:
         log(f"Max think tokens: {max_think_tokens}")
         log(f"Overflow suffix: {overflow_suffix} ({repr(overflow_suffix_str)})")
+    if max_think_tokens is None:
+        log(f"Prompt suffix: {prompt_suffix} ({repr(prompt_suffix_str)})")
     log(f"Run name: {run_name}")
     log(f"Update: {update}")
 
@@ -528,6 +561,8 @@ def run_inference(
             prompts = construct_inference_prompts(
                 records=dataset,
                 eval_type=resolved_eval_type,
+                # prompt suffix is onepass-only; None for twopass/nothink modes
+                prompt_suffix=prompt_suffix_str if max_think_tokens is None else None,
             )
 
             output_data: dict[str, Any]
@@ -555,6 +590,8 @@ def run_inference(
                         "max_tokens": max_tokens,
                         "run_name": run_name,
                         "onepass": True,
+                        "prompt_suffix_key": prompt_suffix,
+                        "prompt_suffix": prompt_suffix_str,
                     },
                     "analysis": None,
                     "evaluation": None,

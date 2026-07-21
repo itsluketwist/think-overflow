@@ -77,6 +77,16 @@ overflow_suffixes=(
     # "human"
 )
 
+# prompt suffix keys (see _PROMPT_SUFFIXES in src/run_inference.py), onepass only:
+#   none    — nothing added (baseline)
+#   concise — asks for brief reasoning and a guaranteed final answer
+#   aspects — swap step-by-step reasoning for a quick check of key problem aspects
+prompt_suffixes=(
+    "none"
+    # "concise"
+    # "aspects"
+)
+
 # force regeneration even if output file already exists
 update=false
 
@@ -99,27 +109,39 @@ echo "Config: $inference_config"
 echo "Max tokens: $max_tokens"
 echo "Max think tokens: ${max_think_tokens[*]}"
 echo "Overflow suffixes: ${overflow_suffixes[*]}"
+echo "Prompt suffixes: ${prompt_suffixes[*]}"
 echo "Update: $update"
 echo
 
 for model in "${models[@]}"; do
     for tokens in "${max_think_tokens[@]}"; do
-        # determine mode: "" = onepass, "0" = nothink, N = twopass sweep over suffixes
+        # mode: "" = onepass (prompt-suffix sweep), "0" = nothink, N = twopass (overflow sweep)
         if [ -z "$tokens" ]; then
-            run_tag="onepass"
+            mode="onepass"
             think_flags=""
-            suffixes=("")
+            suffixes=("${prompt_suffixes[@]}")
         elif [ "$tokens" = "0" ]; then
+            mode="nothink"
             run_tag="nothink"
             think_flags="--max-think-tokens 0"
             suffixes=("")  # no overflow suffix for nothink — no reasoning to truncate
         else
+            mode="twopass"
             suffixes=("${overflow_suffixes[@]}")
         fi
 
         for suffix in "${suffixes[@]}"; do
-            # build human-readable run tag and optional cli flags for twopass
-            if [ "$tokens" != "" ] && [ "$tokens" != "0" ]; then
+            # build human-readable run tag and mode-specific cli flags per suffix
+            extra_flags=""
+            if [ "$mode" = "onepass" ]; then
+                # onepass sweeps prompt suffixes; "none" keeps the baseline run tag/flags
+                if [ "$suffix" = "none" ]; then
+                    run_tag="onepass"
+                else
+                    run_tag="onepass-${suffix}"
+                    extra_flags="--prompt-suffix $suffix"
+                fi
+            elif [ "$mode" = "twopass" ]; then
                 run_tag="th${tokens}-${suffix}"
                 think_flags="--max-think-tokens $tokens --overflow-suffix $suffix"
             fi
@@ -144,6 +166,7 @@ run \
     --config-profile $inference_config \
     --max-tokens $max_tokens \
     $think_flags \
+    $extra_flags \
     $update_flag
 
 echo "Ending job: $model | mx=$max_tokens | $run_tag"

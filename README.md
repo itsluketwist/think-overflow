@@ -64,6 +64,15 @@ run -m qwen3-8b -cp greedy --max-tokens 32768 -d code/evalplus,code/livecodebenc
 run -m qwen3-8b -cp greedy --max-tokens 32768 --max-think-tokens 8192 --overflow-suffix formal -d code/evalplus,code/livecodebench,code/bigcodebench,code/code_contests,crux/cruxeval_i,crux/cruxeval_o
 ```
 
+For onepass runs, `--prompt-suffix` appends an instruction to every prompt to test whether prompt-engineering
+shortens reasoning (keys registered in `_PROMPT_SUFFIXES` in [`src/run_inference.py`](src/run_inference.py); `none`
+is the baseline). It is onepass-only and errors if combined with `--max-think-tokens`.
+
+```shell
+# onepass with a prompt-engineering suffix — writes to a distinct results file
+run -m qwen3-8b -cp greedy --max-tokens 32768 --prompt-suffix concise -d code/evalplus,crux/cruxeval_i
+```
+
 HPC job submission is handled via [`scripts/submit_job.sh`](scripts/submit_job.sh) — configure the
 model list, datasets, and token caps there, then run the script to dispatch Slurm jobs.
 

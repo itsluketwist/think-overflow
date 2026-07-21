@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 
-from src.run_inference import _OVERFLOW_SUFFIXES, run_inference
+from src.run_inference import _OVERFLOW_SUFFIXES, _PROMPT_SUFFIXES, run_inference
 
 
 parser = ArgumentParser(
@@ -97,6 +97,18 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--prompt-suffix",
+    type=str,
+    choices=list(_PROMPT_SUFFIXES.keys()),
+    default="none",
+    help=(
+        "Instruction appended to the end of every user prompt (onepass only). "
+        "Used to test whether prompt-engineering shortens reasoning. "
+        "none=nothing (baseline). Combining with --max-think-tokens is an error."
+    ),
+)
+
+parser.add_argument(
     "-u",
     "--update",
     action="store_true",
@@ -130,6 +142,7 @@ def main() -> None:
         max_think_tokens=args.max_think_tokens,
         max_tokens=args.max_tokens,
         overflow_suffix=args.overflow_suffix,
+        prompt_suffix=args.prompt_suffix,
         debug=args.debug,
         update=args.update,
     )

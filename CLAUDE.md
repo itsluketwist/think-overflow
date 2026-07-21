@@ -40,6 +40,16 @@ Controlled via `--overflow-suffix` flag:
 - `formal`: appends "... I have to stop thinking and answer now."
 - `human`: appends "... oops, I really need to stop thinking and to answer."
 
+## Prompt Suffixes
+
+Controlled via `--prompt-suffix` flag; **onepass only** (errors if combined with `--max-think-tokens`). Appends an instruction to the end of every user prompt to test whether prompt-engineering reduces reasoning length. Keys registered in `_PROMPT_SUFFIXES` in `src/run_inference.py`:
+
+- `none`: nothing appended (baseline; keeps the standard `_onepass` filenames)
+- `concise`: asks for brief reasoning and a guaranteed final answer
+- `aspects`: replaces step-by-step reasoning with a short check of key problem aspects (inputs/outputs/edge cases/design choices) to force an early stop
+
+Non-baseline variants write to `output/onepass/{model}/{dataset}_{config}_mx{max_tokens}_onepass_{key}.json`.
+
 ## Data Format
 
 - Inference datasets: `data/{type}/*.jsonl` — required key: `prompt`; type auto-detected from directory (`code`, `math`, `reasoning`, `crux`)
