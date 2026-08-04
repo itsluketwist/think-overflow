@@ -52,16 +52,16 @@ max_think_tokens=(
     ""
 
     # nothink - run with reasoning disabled
-    "0"
+    # "0"
 
-    # max_tokens = 32768
-    4096     # = 1/8
-    8192     # = 2/8
-    12288    # = 3/8
-    16384    # = 4/8
-    20480    # = 5/8
-    24576    # = 6/8
-    28672    # = 7/8
+    # twopass reasoning caps (max_tokens = 32768)
+    # 4096     # = 1/8
+    # 8192     # = 2/8
+    # 12288    # = 3/8
+    # 16384    # = 4/8
+    # 20480    # = 5/8
+    # 24576    # = 6/8
+    # 28672    # = 7/8
 )
 
 # overflow suffix keys (see _OVERFLOW_SUFFIXES in src/run_infer.py):
@@ -82,9 +82,9 @@ overflow_suffixes=(
 #   concise — asks for brief reasoning and a guaranteed final answer
 #   aspects — swap step-by-step reasoning for a quick check of key problem aspects
 prompt_suffixes=(
-    "none"
-    # "concise"
-    # "aspects"
+    # "none"    # baseline onepass (already run)
+    "concise"
+    "aspects"
 )
 
 # force regeneration even if output file already exists

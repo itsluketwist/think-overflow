@@ -8,7 +8,6 @@ repos:
       - id: check-case-conflict
       - id: end-of-file-fixer
       - id: trailing-whitespace
-      - id: requirements-txt-fixer
       - id: check-yaml
       - id: check-toml
       - id: check-json

@@ -20,12 +20,12 @@ We evaluate 7 reasoning models across 6 code benchmarks (`EvalPlus`, `LiveCodeBe
 
 ## *installation*
 
-The code requires Python 3.11.6 to ensure valid reproduction of experiments.
-Ensure you have it installed with the command below, otherwise download and install it from
-[here](https://www.python.org/downloads/).
+Dependencies are managed with [`uv`](https://docs.astral.sh/uv/), which is the only tool you need
+installed up front — it fetches the correct Python version (3.11.6, as used for all reported
+experiments) for you:
 
 ```shell
-python --version
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 Now clone the repository code:
@@ -34,16 +34,22 @@ Now clone the repository code:
 git clone https://github.com/itsluketwist/think-overflow
 ```
 
-Once cloned, install the requirements locally in a virtual environment:
+Once cloned, create the virtual environment and install the exact locked dependencies:
 
 ```shell
-python3.11 -m venv .venv
+cd think-overflow
 
+uv sync --locked
+```
+
+This creates `.venv/` and installs the project itself in editable mode, so the `run` CLI is
+available. Either activate the environment, or prefix commands with `uv run`:
+
+```shell
 source .venv/bin/activate
 
-pip install -r requirements.frozen
-
-pip install -e .
+# ...or, without activating:
+uv run run --help
 ```
 
 ## *usage*
@@ -106,11 +112,29 @@ run -m qwen3-0b -cp greedy --max-tokens 8192 --max-think-tokens 4096 --overflow-
 We use a few extra processes to ensure the code maintains a high quality.
 First clone the project and create a virtual environment - as described above.
 
-To update the frozen requirements after changing `requirements.txt`:
+### *dependencies*
+
+Dependencies live in the `dependencies` list of [`pyproject.toml`](pyproject.toml), and the exact
+resolved versions of every direct and transitive dependency are recorded in `uv.lock` (which is
+committed, and should never be edited by hand).
 
 ```shell
-uv pip freeze > requirements.frozen
+# add or remove a dependency, updating pyproject.toml and uv.lock together
+uv add <package>
+uv remove <package>
+
+# re-resolve uv.lock after editing pyproject.toml by hand
+uv lock
+
+# upgrade every dependency to the newest versions the constraints allow
+uv lock --upgrade
+
+# check uv.lock is in sync with pyproject.toml, without changing anything
+uv lock --check
 ```
+
+Note that the runtime dependencies are deliberately pinned to exact versions, so that the reported
+experiments can be reproduced — upgrade them only intentionally.
 
 ### *tests*
 
@@ -118,9 +142,7 @@ This project includes unit tests to ensure correct functionality.
 Use [`pytest`](https://docs.pytest.org/en/stable/) to run the tests with:
 
 ```shell
-pip install pytest
-
-pytest tests
+uv run pytest tests
 ```
 
 ### *linting*
@@ -128,7 +150,5 @@ pytest tests
 We use [`pre-commit`](https://pre-commit.com/) to lint the code, run it using:
 
 ```shell
-pip install pre-commit
-
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```

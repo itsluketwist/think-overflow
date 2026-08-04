@@ -7,7 +7,7 @@ Thinking-mode models (Qwen3, OLMo-Think, Nemotron) may spend their entire token 
 ## Known Issues
 
 - vLLM progress bar shows incorrect total with `n>1` samples — harmless, can be ignored
-- `transformers>=5.0.0` breaks vLLM 0.7.3 — pin `transformers<5.0.0` in requirements
+- `transformers>=5.0.0` breaks vLLM — keep `transformers` pinned below it in `pyproject.toml`
 - PyTorch 2.4+ prints a NCCL process group warning on exit — harmless
 
 ## Output Structure
@@ -57,4 +57,7 @@ Non-baseline variants write to `output/onepass/{model}/{dataset}_{config}_mx{max
 
 ## External Dependencies
 
+- Managed entirely with `uv`: declared in `pyproject.toml`, resolved into the committed `uv.lock`
+- Use `uv add` / `uv remove` / `uv lock`; never hand-edit `uv.lock`, and never reintroduce a `requirements.txt`
+- Runtime versions are pinned exactly so `uv sync` reproduces the experiment environment
 - `llm_cgr` (llm-codegen-research): utility package — `save_json(data, path)`, `save_jsonl(data, path)`, `load_jsonl(file_path)`
