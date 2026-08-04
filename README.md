@@ -52,6 +52,10 @@ source .venv/bin/activate
 uv run run --help
 ```
 
+BigCodeBench evaluation runs its test code in a second, dedicated venv, since the benchmark pins
+library versions that conflict with the ones above — see [`harness/README.md`](harness/README.md)
+to create it before running any `code/bigcodebench` evaluation.
+
 ## *usage*
 
 After [*installation*](#installation), use the `run` CLI to run inference. Two modes are available:

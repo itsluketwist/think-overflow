@@ -14,7 +14,7 @@ build/
 .env
 
 # harness input/output (generated artefacts, not tracked)
-harness/
+harness/archive/
 
 # editor
 .DS_Store

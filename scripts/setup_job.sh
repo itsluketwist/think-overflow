@@ -42,7 +42,7 @@ echo
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 # bigcodebench evaluation requires a dedicated venv with pinned library versions
-export BCB_PYTHON=/users/$USER/code/think-overflow/harness/venv/bin/python
+export BCB_PYTHON=/users/$USER/code/think-overflow/harness/.venv/bin/python
 
 echo "Environment setup, checking CUDA versions..."
 
