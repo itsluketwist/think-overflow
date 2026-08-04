@@ -13,8 +13,9 @@ build/
 # environment secrets
 .env
 
-# harness input/output (generated artefacts, not tracked)
-harness/archive/
+# harness venv and files
+harness/archive/*
+harness/.venv/*
 
 # editor
 .DS_Store

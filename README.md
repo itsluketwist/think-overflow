@@ -104,7 +104,7 @@ run -m qwen3-0b -cp greedy --max-tokens 8192 --max-think-tokens 4096 --overflow-
 - [`config/`](config/) — inference profiles (`greedy`, `default`) and model registry
 - [`data/`](data/) — benchmark datasets (`code/`, `crux/`, `math/`, `reasoning/`) and download notebook
 - [`figures/`](figures/) — paper figures produced by the analysis notebooks
-- [`harness/`](harness/) — code-execution evaluation harnesses (BigCodeBench, EditBench, CodeReval)
+- [`harness/`](harness/) — dedicated venv used to execute BigCodeBench test code
 - [`notebooks/`](notebooks/) — analysis notebooks: `02_budget` (RQ1), `03_accuracy` (RQ2), `04_transition` (RQ3)
 - [`output/`](output/) — inference results (`onepass/`, `twopass/`), per-model summaries, and token budget statistics
 - [`scripts/`](scripts/) — HPC job submission (`submit_job.sh`) and token stats pre-computation (`compute_stats.py`)

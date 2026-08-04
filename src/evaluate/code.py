@@ -7,7 +7,6 @@ import signal
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
 from typing import Any
 
 from llm_cgr import Markdown
@@ -20,8 +19,6 @@ from src.evaluate.statistics import compute_pass_at_1, wilson_ci
 _DEFAULT_TIMEOUT_SECONDS = 5.0
 # bigcodebench tasks import heavy libraries (pandas, numpy) so need more time
 _BCB_TIMEOUT_SECONDS = 30.0
-# editbench tests run via pytest with potential package installs — allow more time
-_PYTEST_TIMEOUT_SECONDS = 30.0
 _DEFAULT_MEMORY_MB = 512
 
 
@@ -185,72 +182,6 @@ for _idx, (_input, _expected) in enumerate(_test_cases):
     return code
 
 
-def _run_pytest_tests(
-    response: str,
-    record: dict[str, Any],
-) -> tuple[bool, str]:
-    """Run EditBench-style tests using pytest in an isolated temp directory.
-
-    Writes the model output as solution.py and original_code.py (both names appear
-    in different EditBench test suites), writes auxiliary files from test_harness
-    (conftest.py, test_utils.py, etc.), then runs pytest on the test file.
-
-    Returns (passed, output/error message).
-    """
-    code = _extract_code(response)
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-
-            # write model output under both common module names used in test imports
-            (tmp_path / "solution.py").write_text(code)
-            (tmp_path / "original_code.py").write_text(code)
-
-            # write auxiliary files from test_harness (conftest.py, test_utils.py, etc.)
-            for filename, content in record.get("test_harness", {}).items():
-                if isinstance(content, str):
-                    (tmp_path / filename).write_text(content)
-
-            # write the test file last so it can import the files above
-            (tmp_path / "test_editbench.py").write_text(record["test_code"])
-
-            # run pytest; -x stops on first failure, --tb=short gives compact tracebacks
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "pytest",
-                    "test_editbench.py",
-                    "-x",
-                    "--tb=short",
-                    "-q",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=_PYTEST_TIMEOUT_SECONDS,
-                cwd=tmp_dir,
-            )
-    except subprocess.TimeoutExpired:
-        return False, f"timeout after {_PYTEST_TIMEOUT_SECONDS}s"
-
-    if result.returncode == 0:
-        return True, result.stdout
-
-    error = result.stderr.strip() or result.stdout.strip()
-    return False, error[:500] if error else f"exit code {result.returncode}"
-
-
-# datasets that require an official external harness for accurate scoring —
-# test execution is skipped for these; only structural fields are recorded.
-# add new dataset stems here when they need offline evaluation.
-_OFFICIAL_HARNESS_DATASETS: frozenset[str] = frozenset(
-    {
-        "codereval",
-        "editbench",
-    }
-)
-
-
 def _evaluate_response(
     response: str,
     record: dict[str, Any],
@@ -258,17 +189,11 @@ def _evaluate_response(
 ) -> tuple[bool, str | None]:
     """Build and execute test code from a response against a record's test cases.
 
-    Routes editbench records (identified by the test_harness field) to a pytest
-    runner; all other code benchmarks use inline subprocess execution.
     Pass python_executable to run tests under a different interpreter (e.g. a
     dedicated venv with benchmark-specific library versions installed).
 
     Returns (passed, output).
     """
-    # editbench records carry test_harness (auxiliary pytest files) — run via pytest
-    if "test_harness" in record:
-        return _run_pytest_tests(response=response, record=record)
-
     code = _extract_code(response)
     test_code = _build_test_code(
         code=code,
@@ -296,8 +221,6 @@ def evaluate_code(
     """Evaluate code responses by executing them against test cases in each record.
 
     Evaluates the answer section only; also checks correct_in_reasoning as a diagnostic.
-    Pass dataset_name (file stem) to skip test execution for benchmarks listed in
-    _OFFICIAL_HARNESS_DATASETS — those are scored offline via their official harnesses.
 
     BigCodeBench requires a dedicated venv with pinned libraries (numpy, pandas, scipy,
     etc.). Set the BCB_PYTHON environment variable to the path of that venv's interpreter;
@@ -311,9 +234,6 @@ def evaluate_code(
     per_sample_passed = [0] * k
     pass_at_k_count = 0
 
-    # skip test execution for datasets that use official external harnesses
-    skip_execution = dataset_name in _OFFICIAL_HARNESS_DATASETS
-
     # bigcodebench requires its own venv for pinned library versions; read path from env
     python_executable: str | None = (
         os.environ.get("BCB_PYTHON") if dataset_name == "bigcodebench" else None
@@ -323,17 +243,6 @@ def evaluate_code(
         sample_results: list[dict[str, Any]] = []
 
         for p in sample_parsed:
-            if skip_execution:
-                sample_results.append(
-                    {
-                        "passed": None,
-                        "output": None,
-                        "answer_extracted": p.answer.strip() != "",
-                        "correct_in_reasoning": None,
-                    }
-                )
-                continue
-
             # primary evaluation: answer section only
             # empty answer section = model failed to produce code after reasoning
             if p.answer.strip():
