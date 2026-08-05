@@ -55,6 +55,13 @@ _PROMPT_SUFFIXES: dict[str, str] = {
         "aspects of the problem — such as the inputs, outputs, edge cases, and any "
         "interesting design choices — then stop and give your final answer."
     ),
+    # "plansolve" adapts the PS+ trigger (Wang et al., ACL 2023) from arithmetic to code
+    "plansolve": (
+        "\n\nLet's first understand the problem, identify the relevant inputs, "
+        "outputs, and edge cases, and devise a plan. Then, let's carry out the plan "
+        "and solve the problem step by step, paying attention to correctness and edge "
+        "cases, and give the final answer."
+    ),
 }
 
 

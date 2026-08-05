@@ -78,13 +78,15 @@ overflow_suffixes=(
 )
 
 # prompt suffix keys (see _PROMPT_SUFFIXES in src/run_inference.py), onepass only:
-#   none    — nothing added (baseline)
-#   concise — asks for brief reasoning and a guaranteed final answer
-#   aspects — swap step-by-step reasoning for a quick check of key problem aspects
+#   none       — nothing added (baseline)
+#   concise    — asks for brief reasoning and a guaranteed final answer
+#   aspects    — swap step-by-step reasoning for a quick check of key problem aspects
+#   plansolve  — PS+ plan-and-solve prompt (Wang et al., ACL 2023), adapted to code
 prompt_suffixes=(
     # "none"    # baseline onepass (already run)
     "concise"
     "aspects"
+    "plansolve"
 )
 
 # force regeneration even if output file already exists

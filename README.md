@@ -61,7 +61,8 @@ to create it before running any `code/bigcodebench` evaluation.
 After [*installation*](#installation), use the `run` CLI to run inference. Two modes are available:
 
 - **onepass** (omit `--max-think-tokens`) — single-pass unconstrained inference (baseline)
-- **twopass** (`--max-think-tokens N`) — two-pass think-overflow inference with a reasoning cap
+- **twopass** (`--max-think-tokens N`) — two-pass think-overflow inference with a reasoning cap, following
+  the budget-forcing approach of [Muennighoff et al. (s1, EMNLP 2025)](https://aclanthology.org/2025.emnlp-main.1025/)
 
 `--max-tokens` sets the overall token budget: total generation tokens for onepass, or combined
 Pass 1 + Pass 2 tokens for twopass.
@@ -76,7 +77,8 @@ run -m qwen3-8b -cp greedy --max-tokens 32768 --max-think-tokens 8192 --overflow
 
 For onepass runs, `--prompt-suffix` appends an instruction to every prompt to test whether prompt-engineering
 shortens reasoning (keys registered in `_PROMPT_SUFFIXES` in [`src/run_inference.py`](src/run_inference.py); `none`
-is the baseline). It is onepass-only and errors if combined with `--max-think-tokens`.
+is the baseline). It is onepass-only and errors if combined with `--max-think-tokens`. The `plansolve` key adapts
+the PS+ plan-and-solve prompt from [Wang et al. (ACL 2023)](https://aclanthology.org/2023.acl-long.147/).
 
 ```shell
 # onepass with a prompt-engineering suffix — writes to a distinct results file

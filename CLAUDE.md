@@ -47,6 +47,7 @@ Controlled via `--prompt-suffix` flag; **onepass only** (errors if combined with
 - `none`: nothing appended (baseline; keeps the standard `_onepass` filenames)
 - `concise`: asks for brief reasoning and a guaranteed final answer
 - `aspects`: replaces step-by-step reasoning with a short check of key problem aspects (inputs/outputs/edge cases/design choices) to force an early stop
+- `plansolve`: PS+ plan-and-solve prompt (Wang et al., ACL 2023), adapted from arithmetic to code — a literature baseline that adds reasoning structure
 
 Non-baseline variants write to `output/onepass/{model}/{dataset}_{config}_mx{max_tokens}_onepass_{key}.json`.
 
