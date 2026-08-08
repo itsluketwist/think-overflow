@@ -1142,5 +1142,653 @@
             "mean_prompt_tokens_2": null,
             "mean_completion_tokens_2": null
         }
+    },
+    "code/evalplus_greedy_mx32768_onepass_concise": {
+        "pass_at_1": 0.577490774907749,
+        "pass_at_1_ci": [
+            0.5355031946995784,
+            0.6183876441925137
+        ],
+        "pass_at_1_list": [
+            0.577490774907749
+        ],
+        "pass_at_k": 0.577490774907749,
+        "pass_at_k_ci": [
+            0.5355031946995784,
+            0.6183876441925137
+        ],
+        "k": 1,
+        "total": 542,
+        "statistics": {
+            "valid_reasoning_rate": 0.7712177121771218,
+            "invalid_reasoning_rate": 0.22878228782287824,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.22878228782287824,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.7712177121771218,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.22878228782287824,
+            "general_overflow_rate": 0.22878228782287824,
+            "answer_extracted_rate": 0.7712177121771218
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 113.90959409594096,
+            "mean_completion_tokens_1": 10195.972324723247,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/livecodebench_greedy_mx32768_onepass_concise": {
+        "pass_at_1": 0.2046783625730994,
+        "pass_at_1_ci": [
+            0.16531001204985674,
+            0.25060732565507854
+        ],
+        "pass_at_1_list": [
+            0.2046783625730994
+        ],
+        "pass_at_k": 0.2046783625730994,
+        "pass_at_k_ci": [
+            0.16531001204985674,
+            0.25060732565507854
+        ],
+        "k": 1,
+        "total": 342,
+        "statistics": {
+            "valid_reasoning_rate": 0.3713450292397661,
+            "invalid_reasoning_rate": 0.6286549707602339,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.6286549707602339,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.3713450292397661,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.6286549707602339,
+            "general_overflow_rate": 0.6345029239766082,
+            "answer_extracted_rate": 0.3713450292397661
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 549.546783625731,
+            "mean_completion_tokens_1": 24529.48538011696,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/bigcodebench_greedy_mx32768_onepass_concise": {
+        "pass_at_1": 0.19298245614035087,
+        "pass_at_1_ci": [
+            0.17112033871881827,
+            0.21690673915812514
+        ],
+        "pass_at_1_list": [
+            0.19298245614035087
+        ],
+        "pass_at_k": 0.19298245614035087,
+        "pass_at_k_ci": [
+            0.17112033871881827,
+            0.21690673915812514
+        ],
+        "k": 1,
+        "total": 1140,
+        "statistics": {
+            "valid_reasoning_rate": 0.5868421052631579,
+            "invalid_reasoning_rate": 0.4131578947368421,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.4131578947368421,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.5868421052631579,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.4131578947368421,
+            "general_overflow_rate": 0.41403508771929826,
+            "answer_extracted_rate": 0.5868421052631579
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 198.6964912280702,
+            "mean_completion_tokens_1": 15871.543859649122,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/code_contests_greedy_mx32768_onepass_concise": {
+        "pass_at_1": 0.23636363636363636,
+        "pass_at_1_ci": [
+            0.17799884648393513,
+            0.30672486647336605
+        ],
+        "pass_at_1_list": [
+            0.23636363636363636
+        ],
+        "pass_at_k": 0.23636363636363636,
+        "pass_at_k_ci": [
+            0.17799884648393513,
+            0.30672486647336605
+        ],
+        "k": 1,
+        "total": 165,
+        "statistics": {
+            "valid_reasoning_rate": 0.28484848484848485,
+            "invalid_reasoning_rate": 0.7151515151515152,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.7151515151515152,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.28484848484848485,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.7151515151515152,
+            "general_overflow_rate": 0.7212121212121212,
+            "answer_extracted_rate": 0.28484848484848485
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 674.739393939394,
+            "mean_completion_tokens_1": 27822.975757575758,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "crux/cruxeval_i_greedy_mx32768_onepass_concise": {
+        "pass_at_1": 0.39125,
+        "pass_at_1_ci": [
+            0.3580284600082399,
+            0.42551094556649466
+        ],
+        "pass_at_1_list": [
+            0.39125
+        ],
+        "pass_at_k": 0.39125,
+        "pass_at_k_ci": [
+            0.3580284600082399,
+            0.42551094556649466
+        ],
+        "k": 1,
+        "total": 800,
+        "statistics": {
+            "valid_reasoning_rate": 0.605,
+            "invalid_reasoning_rate": 0.395,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.395,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.605,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.395,
+            "general_overflow_rate": 0.395,
+            "answer_extracted_rate": 0.605
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 335.795,
+            "mean_completion_tokens_1": 15143.45,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "crux/cruxeval_o_greedy_mx32768_onepass_concise": {
+        "pass_at_1": 0.49625,
+        "pass_at_1_ci": [
+            0.46170418010819236,
+            0.5308316614633504
+        ],
+        "pass_at_1_list": [
+            0.49625
+        ],
+        "pass_at_k": 0.49625,
+        "pass_at_k_ci": [
+            0.46170418010819236,
+            0.5308316614633504
+        ],
+        "k": 1,
+        "total": 800,
+        "statistics": {
+            "valid_reasoning_rate": 0.6475,
+            "invalid_reasoning_rate": 0.3525,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.3525,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.6475,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.3525,
+            "general_overflow_rate": 0.35375,
+            "answer_extracted_rate": 0.6475
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 301.66375,
+            "mean_completion_tokens_1": 12824.23375,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/evalplus_greedy_mx32768_onepass_aspects": {
+        "pass_at_1": 0.566420664206642,
+        "pass_at_1_ci": [
+            0.5243768901361023,
+            0.6075295431999768
+        ],
+        "pass_at_1_list": [
+            0.566420664206642
+        ],
+        "pass_at_k": 0.566420664206642,
+        "pass_at_k_ci": [
+            0.5243768901361023,
+            0.6075295431999768
+        ],
+        "k": 1,
+        "total": 542,
+        "statistics": {
+            "valid_reasoning_rate": 0.7712177121771218,
+            "invalid_reasoning_rate": 0.22878228782287824,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.22878228782287824,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.7712177121771218,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.22878228782287824,
+            "general_overflow_rate": 0.22878228782287824,
+            "answer_extracted_rate": 0.7712177121771218
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 133.90959409594095,
+            "mean_completion_tokens_1": 10497.171586715867,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/livecodebench_greedy_mx32768_onepass_aspects": {
+        "pass_at_1": 0.2134502923976608,
+        "pass_at_1_ci": [
+            0.1733322085384325,
+            0.2599341191356631
+        ],
+        "pass_at_1_list": [
+            0.2134502923976608
+        ],
+        "pass_at_k": 0.2134502923976608,
+        "pass_at_k_ci": [
+            0.1733322085384325,
+            0.2599341191356631
+        ],
+        "k": 1,
+        "total": 342,
+        "statistics": {
+            "valid_reasoning_rate": 0.38011695906432746,
+            "invalid_reasoning_rate": 0.6198830409356725,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.6198830409356725,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.38011695906432746,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.6198830409356725,
+            "general_overflow_rate": 0.6198830409356725,
+            "answer_extracted_rate": 0.38011695906432746
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 569.546783625731,
+            "mean_completion_tokens_1": 24424.932748538013,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/bigcodebench_greedy_mx32768_onepass_aspects": {
+        "pass_at_1": 0.18859649122807018,
+        "pass_at_1_ci": [
+            0.1669482512925953,
+            0.21233635626830452
+        ],
+        "pass_at_1_list": [
+            0.18859649122807018
+        ],
+        "pass_at_k": 0.18859649122807018,
+        "pass_at_k_ci": [
+            0.1669482512925953,
+            0.21233635626830452
+        ],
+        "k": 1,
+        "total": 1140,
+        "statistics": {
+            "valid_reasoning_rate": 0.6070175438596491,
+            "invalid_reasoning_rate": 0.3929824561403509,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.3929824561403509,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.6070175438596491,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.3929824561403509,
+            "general_overflow_rate": 0.393859649122807,
+            "answer_extracted_rate": 0.6070175438596491
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 218.6964912280702,
+            "mean_completion_tokens_1": 15241.63596491228,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/code_contests_greedy_mx32768_onepass_aspects": {
+        "pass_at_1": 0.24242424242424243,
+        "pass_at_1_ci": [
+            0.18337824083998316,
+            0.3131909040033571
+        ],
+        "pass_at_1_list": [
+            0.24242424242424243
+        ],
+        "pass_at_k": 0.24242424242424243,
+        "pass_at_k_ci": [
+            0.18337824083998316,
+            0.3131909040033571
+        ],
+        "k": 1,
+        "total": 165,
+        "statistics": {
+            "valid_reasoning_rate": 0.3090909090909091,
+            "invalid_reasoning_rate": 0.6909090909090909,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.6909090909090909,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.3090909090909091,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.6909090909090909,
+            "general_overflow_rate": 0.696969696969697,
+            "answer_extracted_rate": 0.3090909090909091
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 694.739393939394,
+            "mean_completion_tokens_1": 27046.836363636365,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "crux/cruxeval_i_greedy_mx32768_onepass_aspects": {
+        "pass_at_1": 0.4525,
+        "pass_at_1_ci": [
+            0.4183178664441123,
+            0.48713612679542706
+        ],
+        "pass_at_1_list": [
+            0.4525
+        ],
+        "pass_at_k": 0.4525,
+        "pass_at_k_ci": [
+            0.4183178664441123,
+            0.48713612679542706
+        ],
+        "k": 1,
+        "total": 800,
+        "statistics": {
+            "valid_reasoning_rate": 0.61625,
+            "invalid_reasoning_rate": 0.38375,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.38375,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.61625,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.38375,
+            "general_overflow_rate": 0.38375,
+            "answer_extracted_rate": 0.61625
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 355.795,
+            "mean_completion_tokens_1": 14905.89125,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "crux/cruxeval_o_greedy_mx32768_onepass_aspects": {
+        "pass_at_1": 0.4075,
+        "pass_at_1_ci": [
+            0.3739710996890302,
+            0.44191299240901993
+        ],
+        "pass_at_1_list": [
+            0.4075
+        ],
+        "pass_at_k": 0.4075,
+        "pass_at_k_ci": [
+            0.3739710996890302,
+            0.44191299240901993
+        ],
+        "k": 1,
+        "total": 800,
+        "statistics": {
+            "valid_reasoning_rate": 0.5025,
+            "invalid_reasoning_rate": 0.4975,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.4975,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.5025,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.4975,
+            "general_overflow_rate": 0.4975,
+            "answer_extracted_rate": 0.5025
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 321.66375,
+            "mean_completion_tokens_1": 17405.95,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/evalplus_greedy_mx32768_onepass_plansolve": {
+        "pass_at_1": 0.5,
+        "pass_at_1_ci": [
+            0.4580545521339364,
+            0.5419454478660636
+        ],
+        "pass_at_1_list": [
+            0.5
+        ],
+        "pass_at_k": 0.5,
+        "pass_at_k_ci": [
+            0.4580545521339364,
+            0.5419454478660636
+        ],
+        "k": 1,
+        "total": 542,
+        "statistics": {
+            "valid_reasoning_rate": 0.6955719557195572,
+            "invalid_reasoning_rate": 0.3044280442804428,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.3044280442804428,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.6955719557195572,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.3044280442804428,
+            "general_overflow_rate": 0.3044280442804428,
+            "answer_extracted_rate": 0.6955719557195572
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 144.90959409594095,
+            "mean_completion_tokens_1": 13214.867158671586,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/livecodebench_greedy_mx32768_onepass_plansolve": {
+        "pass_at_1": 0.20175438596491227,
+        "pass_at_1_ci": [
+            0.16264260198281383,
+            0.24749173906573468
+        ],
+        "pass_at_1_list": [
+            0.20175438596491227
+        ],
+        "pass_at_k": 0.20175438596491227,
+        "pass_at_k_ci": [
+            0.16264260198281383,
+            0.24749173906573468
+        ],
+        "k": 1,
+        "total": 342,
+        "statistics": {
+            "valid_reasoning_rate": 0.34502923976608185,
+            "invalid_reasoning_rate": 0.6549707602339181,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.6549707602339181,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.34502923976608185,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.6549707602339181,
+            "general_overflow_rate": 0.6578947368421053,
+            "answer_extracted_rate": 0.34502923976608185
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 580.546783625731,
+            "mean_completion_tokens_1": 24898.614035087718,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/bigcodebench_greedy_mx32768_onepass_plansolve": {
+        "pass_at_1": 0.15,
+        "pass_at_1_ci": [
+            0.13044922869971282,
+            0.1719016400800027
+        ],
+        "pass_at_1_list": [
+            0.15
+        ],
+        "pass_at_k": 0.15,
+        "pass_at_k_ci": [
+            0.13044922869971282,
+            0.1719016400800027
+        ],
+        "k": 1,
+        "total": 1140,
+        "statistics": {
+            "valid_reasoning_rate": 0.5026315789473684,
+            "invalid_reasoning_rate": 0.49736842105263157,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.49736842105263157,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.5026315789473684,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.49736842105263157,
+            "general_overflow_rate": 0.49736842105263157,
+            "answer_extracted_rate": 0.5026315789473684
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 229.6964912280702,
+            "mean_completion_tokens_1": 18784.90350877193,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "code/code_contests_greedy_mx32768_onepass_plansolve": {
+        "pass_at_1": 0.18181818181818182,
+        "pass_at_1_ci": [
+            0.1304316329841434,
+            0.2476831929988063
+        ],
+        "pass_at_1_list": [
+            0.18181818181818182
+        ],
+        "pass_at_k": 0.18181818181818182,
+        "pass_at_k_ci": [
+            0.1304316329841434,
+            0.2476831929988063
+        ],
+        "k": 1,
+        "total": 165,
+        "statistics": {
+            "valid_reasoning_rate": 0.24242424242424243,
+            "invalid_reasoning_rate": 0.7575757575757576,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.7575757575757576,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.24242424242424243,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.7575757575757576,
+            "general_overflow_rate": 0.7696969696969697,
+            "answer_extracted_rate": 0.24242424242424243
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 705.739393939394,
+            "mean_completion_tokens_1": 28241.478787878787,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "crux/cruxeval_i_greedy_mx32768_onepass_plansolve": {
+        "pass_at_1": 0.32625,
+        "pass_at_1_ci": [
+            0.29465906038797274,
+            0.35950159909349977
+        ],
+        "pass_at_1_list": [
+            0.32625
+        ],
+        "pass_at_k": 0.32625,
+        "pass_at_k_ci": [
+            0.29465906038797274,
+            0.35950159909349977
+        ],
+        "k": 1,
+        "total": 800,
+        "statistics": {
+            "valid_reasoning_rate": 0.42875,
+            "invalid_reasoning_rate": 0.57125,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.57125,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.42875,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.57125,
+            "general_overflow_rate": 0.57125,
+            "answer_extracted_rate": 0.42875
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 366.795,
+            "mean_completion_tokens_1": 20644.5975,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
+    },
+    "crux/cruxeval_o_greedy_mx32768_onepass_plansolve": {
+        "pass_at_1": 0.25375,
+        "pass_at_1_ci": [
+            0.22482169350480546,
+            0.28503190302649
+        ],
+        "pass_at_1_list": [
+            0.25375
+        ],
+        "pass_at_k": 0.25375,
+        "pass_at_k_ci": [
+            0.22482169350480546,
+            0.28503190302649
+        ],
+        "k": 1,
+        "total": 800,
+        "statistics": {
+            "valid_reasoning_rate": 0.35875,
+            "invalid_reasoning_rate": 0.64125,
+            "missing_reasoning_rate": 0.0,
+            "truncated_reasoning_rate": 0.64125,
+            "empty_reasoning_rate": 0.0,
+            "answer_rate": 0.35875,
+            "transition_rate": 0.0,
+            "regenerated_close_tag_rate": 0.0,
+            "reasoning_overflow_rate": 0.64125,
+            "general_overflow_rate": 0.64125,
+            "answer_extracted_rate": 0.35875
+        },
+        "token_statistics": {
+            "mean_prompt_tokens_1": 332.66375,
+            "mean_completion_tokens_1": 22023.78,
+            "mean_prompt_tokens_2": null,
+            "mean_completion_tokens_2": null
+        }
     }
 }
