@@ -48,6 +48,7 @@ Controlled via `--prompt-suffix` flag; **onepass only** (errors if combined with
 - `concise`: asks for brief reasoning and a guaranteed final answer
 - `aspects`: replaces step-by-step reasoning with a short check of key problem aspects (inputs/outputs/edge cases/design choices) to force an early stop
 - `plansolve`: PS+ plan-and-solve prompt (Wang et al., ACL 2023), adapted from arithmetic to code — a literature baseline that adds reasoning structure
+- `budget`: TALE-EP token-budget trigger (Han et al., Findings of ACL 2025), fixed at an 8k token cap — a literature baseline that tells the model to limit its reasoning length
 
 Non-baseline variants write to `output/onepass/{model}/{dataset}_{config}_mx{max_tokens}_onepass_{key}.json`.
 

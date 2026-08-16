@@ -62,6 +62,11 @@ _PROMPT_SUFFIXES: dict[str, str] = {
         "and solve the problem step by step, paying attention to correctness and edge "
         "cases, and give the final answer."
     ),
+    # "budget" adapts the TALE-EP trigger (Han et al., Findings of ACL 2025) with a fixed 8k cap
+    "budget": (
+        "\n\nLet's think step by step and use less than 8000 tokens to reason, "
+        "then give the final answer."
+    ),
 }
 
 

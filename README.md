@@ -78,7 +78,9 @@ run -m qwen3-8b -cp greedy --max-tokens 32768 --max-think-tokens 8192 --overflow
 For onepass runs, `--prompt-suffix` appends an instruction to every prompt to test whether prompt-engineering
 shortens reasoning (keys registered in `_PROMPT_SUFFIXES` in [`src/run_inference.py`](src/run_inference.py); `none`
 is the baseline). It is onepass-only and errors if combined with `--max-think-tokens`. The `plansolve` key adapts
-the PS+ plan-and-solve prompt from [Wang et al. (ACL 2023)](https://aclanthology.org/2023.acl-long.147/).
+the PS+ plan-and-solve prompt from [Wang et al. (ACL 2023)](https://aclanthology.org/2023.acl-long.147/), and the
+`budget` key adapts the TALE-EP token-budget trigger from
+[Han et al. (Findings of ACL 2025)](https://aclanthology.org/2025.findings-acl.1274/), fixed at an 8k token cap.
 
 ```shell
 # onepass with a prompt-engineering suffix — writes to a distinct results file

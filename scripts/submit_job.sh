@@ -82,11 +82,13 @@ overflow_suffixes=(
 #   concise    — asks for brief reasoning and a guaranteed final answer
 #   aspects    — swap step-by-step reasoning for a quick check of key problem aspects
 #   plansolve  — PS+ plan-and-solve prompt (Wang et al., ACL 2023), adapted to code
+#   budget     — TALE-EP token-budget trigger (Han et al., Findings of ACL 2025), fixed at 8k
 prompt_suffixes=(
     # "none"    # baseline onepass (already run)
     "concise"
     "aspects"
     "plansolve"
+    "budget"
 )
 
 # force regeneration even if output file already exists
