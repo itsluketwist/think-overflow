@@ -5,7 +5,7 @@ echo ">>> Submitting inference jobs to slurm >>>"
 
 # hardware constraints (adjust for your cluster)
 GPU_CONSTRAINT="h200"
-CPU_MEMORY="96G"
+CPU_MEMORY="64G"
 
 ###############################################################################
 #                              model configuration                            #
