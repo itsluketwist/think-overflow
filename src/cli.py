@@ -109,6 +109,18 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--skip-ids",
+    type=str,
+    default=None,
+    help=(
+        "Comma-separated task_id values to skip during code evaluation, for tasks "
+        "whose generated code is unsafe to execute (e.g. 'BigCodeBench/348' asks "
+        "for process-killing code that can terminate the evaluation itself). "
+        "Skipped tasks are excluded from all metrics."
+    ),
+)
+
+parser.add_argument(
     "-u",
     "--update",
     action="store_true",
@@ -143,6 +155,7 @@ def main() -> None:
         max_tokens=args.max_tokens,
         overflow_suffix=args.overflow_suffix,
         prompt_suffix=args.prompt_suffix,
+        skip_ids=args.skip_ids,
         debug=args.debug,
         update=args.update,
     )

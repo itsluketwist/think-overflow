@@ -31,6 +31,7 @@ def evaluate(
     details: list[list[dict]],
     tokenizer: Any | None = None,
     dataset_name: str | None = None,
+    skip_ids: set[str] | None = None,
 ) -> tuple[dict, list[dict]]:
     """Evaluate model responses against ground truth, dispatching on eval_type.
 
@@ -40,6 +41,8 @@ def evaluate(
     the details structure is self-describing (transition=False for onepass samples).
     Pass dataset_name (file stem) so evaluators can apply dataset-specific behaviour
     (e.g. skipping test execution for benchmarks with official harnesses).
+    Pass skip_ids (task_id values) to exclude unsafe tasks from code evaluation;
+    only the code evaluator executes model output, so other eval types ignore it.
 
     Returns a result dict (including a 'statistics' sub-dict) and a per-task breakdown list.
     """
@@ -58,11 +61,15 @@ def evaluate(
 
     # run the type-specific evaluator
     evaluator = _EVALUATORS[eval_type]
-    result, breakdown = evaluator(
-        responses=parsed,
-        records=records,
-        dataset_name=dataset_name,
-    )
+    evaluator_kwargs: dict[str, Any] = {
+        "responses": parsed,
+        "records": records,
+        "dataset_name": dataset_name,
+    }
+    # only the code evaluator supports skipping tasks (it executes model output)
+    if eval_type == "code":
+        evaluator_kwargs["skip_ids"] = skip_ids
+    result, breakdown = evaluator(**evaluator_kwargs)
 
     # compute reasoning statistics, blending thinkpack reliability metrics with
     # our custom transition/overflow rates derived from the details structure

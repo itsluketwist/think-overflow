@@ -217,6 +217,7 @@ def evaluate_code(
     responses: list[list[ParsedResponse]],
     records: list[dict[str, Any]],
     dataset_name: str | None = None,
+    skip_ids: set[str] | None = None,
 ) -> tuple[dict, list[dict]]:
     """Evaluate code responses by executing them against test cases in each record.
 
@@ -226,7 +227,12 @@ def evaluate_code(
     etc.). Set the BCB_PYTHON environment variable to the path of that venv's interpreter;
     if unset, the current interpreter is used and imports may fail.
 
-    Returns a dict with pass_at_1, pass_at_1_list, pass_at_k, k, total, and a per-task breakdown.
+    Tasks whose task_id is in skip_ids are never executed and are excluded from all
+    metrics — used for benchmark tasks whose generated code is unsafe to run (e.g.
+    BigCodeBench/348 asks for code that kills processes by name, which can escape the
+    test mocks and terminate the evaluation itself).
+
+    Returns a dict with pass_at_1, pass_at_1_list, pass_at_k, k, total, skipped, and a per-task breakdown.
     """
     results = []
     k = len(responses[0]) if responses and responses[0] else 1
@@ -240,6 +246,19 @@ def evaluate_code(
     )
 
     for sample_parsed, record in zip(responses, records):
+        # dangerous task: record a placeholder breakdown entry and execute nothing.
+        # the entry keeps the breakdown aligned with the details/records lists.
+        if skip_ids and record.get("task_id") in skip_ids:
+            results.append(
+                {
+                    "samples": [],
+                    "pass_at_1": False,
+                    "pass_at_k": False,
+                    "skipped": True,
+                },
+            )
+            continue
+
         sample_results: list[dict[str, Any]] = []
 
         for p in sample_parsed:
@@ -297,7 +316,9 @@ def evaluate_code(
             }
         )
 
-    total = len(results)
+    # skipped tasks are excluded from the metric denominator entirely
+    n_skipped = sum(1 for r in results if r.get("skipped"))
+    total = len(results) - n_skipped
     # averaged pass@1: treat each sample index as an independent trial and average
     pass_at_1_list, pass_at_1, pass_at_1_ci = compute_pass_at_1(
         counts=per_sample_passed,
@@ -314,4 +335,5 @@ def evaluate_code(
         "pass_at_k_ci": pass_at_k_ci,
         "k": k,
         "total": total,
+        "skipped": n_skipped,
     }, results

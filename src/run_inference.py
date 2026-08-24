@@ -380,6 +380,7 @@ def run_inference(
     overflow_suffix: str,
     prompt_suffix: str,
     update: bool,
+    skip_ids: str | None = None,
     debug: bool = False,
 ) -> None:
     """Run two-pass, onepass, or nothink inference with explicit configuration arguments.
@@ -389,12 +390,19 @@ def run_inference(
     When max_think_tokens is 0, runs nothink (empty think block, no reasoning pass).
     The prompt_suffix argument is a key from _PROMPT_SUFFIXES; it appends an instruction
     to every user prompt and is only valid in onepass mode.
+    The skip_ids argument is a comma-separated list of task_id values whose code is
+    unsafe to execute; matching tasks are skipped and excluded from evaluation metrics.
     """
     # resolve suffix key to the actual string appended to truncated reasoning
     overflow_suffix_str: str = _OVERFLOW_SUFFIXES[overflow_suffix]
 
     # resolve prompt suffix key to the actual string appended to every user prompt
     prompt_suffix_str: str = _PROMPT_SUFFIXES[prompt_suffix]
+
+    # parse comma-separated skip ids into a set for the evaluation phase
+    skip_ids_set: set[str] | None = None
+    if skip_ids:
+        skip_ids_set = {s.strip() for s in skip_ids.split(",") if s.strip()}
 
     # prompt suffixes are an onepass-only experiment — reject other modes explicitly
     if prompt_suffix != "none" and max_think_tokens is not None:
@@ -438,6 +446,8 @@ def run_inference(
         log(f"Prompt suffix: {prompt_suffix} ({repr(prompt_suffix_str)})")
     log(f"Run name: {run_name}")
     log(f"Update: {update}")
+    if skip_ids_set:
+        log(f"Skip ids (excluded from code evaluation): {sorted(skip_ids_set)}")
 
     # load inference generation parameters from the selected profile
     inference_config = load_yaml_config(
@@ -739,6 +749,7 @@ def run_inference(
                             tokenizer=tokenizer,
                             details=eval_details,
                             dataset_name=Path(dataset_path).stem,
+                            skip_ids=skip_ids_set,
                         )
 
                     log(
@@ -763,6 +774,9 @@ def run_inference(
                 data["analysis"] = analysis
                 data["breakdown"] = breakdown
                 data["metadata"]["eval_type"] = resolved_eval_type
+                # record any skipped task ids so results files are self-describing
+                if skip_ids_set:
+                    data["metadata"]["skip_ids"] = sorted(skip_ids_set)
                 save_json(data=data, file_path=str(file_path))
                 log("    Saved.")
 
