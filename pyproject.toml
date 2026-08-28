@@ -21,29 +21,48 @@ classifiers = [
 requires-python = "==3.11.6"
 # pinned to the versions used for the reported experiments, uv.lock pins the rest
 dependencies = [
-    "bigcodebench==0.2.5",
     "datasets==4.8.4",
     "Jupyter==1.1.1",
     "llm-codegen-research==2.11",
     "math-verify==0.9.0",
+    "matplotlib==3.11.1",
     "pre-commit",
-    "pytest",
     "pyyaml==6.0.3",
     "requests==2.33.1",
     "setuptools==65.5.0",
     "thinkpack==0.2.4",
-    "torch==2.10.0",
     "tqdm==4.67.3",
     # vllm does not support transformers 5.x
     "transformers==4.57.6",
     "types-PyYAML",
     "uv==0.11.7",
-    "vllm==0.19.0",
+]
+
+[project.optional-dependencies]
+# gpu inference stack, install on the hpc with `uv sync --locked --extra hpc`; both entries
+# are linux-only, so on other platforms `uv sync` (with or without --extra hpc) installs just
+# the core dependencies above
+hpc = [
+    "torch==2.10.0 ; sys_platform == 'linux'",
+    "vllm==0.19.0 ; sys_platform == 'linux'",
 ]
 
 [project.scripts]
 run = "src.cli:main"
 
+# these files import the gpu stack (torch, vllm) from the [hpc] extra, which only installs
+# on linux - ignore just the missing imports when checking locally
+[[tool.ty.overrides]]
+include = [
+    "src/inference/load.py",
+    "src/inference/prompt.py",
+    "src/run_inference.py",
+]
+
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"
+
 [tool.uv]
-# vllm and the cuda torch wheels are linux-only, so resolve the lock for linux alone
-environments = ["sys_platform == 'linux'"]
+# lock for both the hpc (linux) and local dev (macos); the hpc extra is linux-marked, so it
+# resolves to nothing on macos and a plain `uv sync` works on either platform
+environments = ["sys_platform == 'linux'", "sys_platform == 'darwin'"]

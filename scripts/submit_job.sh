@@ -64,14 +64,15 @@ max_think_tokens=(
     # 28672    # = 7/8
 )
 
-# overflow suffix keys (see _OVERFLOW_SUFFIXES in src/run_infer.py):
+# overflow suffix keys (see _OVERFLOW_SUFFIXES in src/run_inference.py):
 #   base      — nothing added (pure truncation)
+#   dots      — appends "..."
 #   truncated — appends " [reasoning truncated]"
 #   formal    — appends "... I have to stop thinking and answer now."
 #   human     — appends "... oops, I really need to stop thinking and to answer."
 overflow_suffixes=(
     "base"
-    # "blank"
+    # "dots"
     # "truncated"
     # "formal"
     # "human"

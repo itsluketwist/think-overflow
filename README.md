@@ -34,12 +34,19 @@ Now clone the repository code:
 git clone https://github.com/itsluketwist/think-overflow
 ```
 
-Once cloned, create the virtual environment and install the exact locked dependencies:
+Once cloned, create the virtual environment and install the exact locked dependencies. The
+GPU inference stack (`torch`, `vllm`) is linux-only and lives behind the `hpc` extra, so a
+plain `uv sync` works for local dev on any platform (analysis notebooks, linting, etc.) — add
+`--extra hpc` on the cluster to also install it:
 
 ```shell
 cd think-overflow
 
+# local dev (any platform) — core dependencies only
 uv sync --locked
+
+# hpc (linux) — adds torch + vllm for running inference
+uv sync --locked --extra hpc
 ```
 
 This creates `.venv/` and installs the project itself in editable mode, so the `run` CLI is
@@ -109,11 +116,12 @@ run -m qwen3-0b -cp greedy --max-tokens 8192 --max-think-tokens 4096 --overflow-
 - [`data/`](data/) — benchmark datasets (`code/`, `crux/`, `math/`, `reasoning/`) and download notebook
 - [`figures/`](figures/) — paper figures produced by the analysis notebooks
 - [`harness/`](harness/) — dedicated venv used to execute BigCodeBench test code
-- [`notebooks/`](notebooks/) — analysis notebooks: `02_budget` (RQ1), `03_accuracy` (RQ2), `04_transition` (RQ3)
+- [`notebooks/`](notebooks/) — analysis notebooks: `01_data_check` (results coverage), `02_budget` (RQ1),
+  `03_accuracy` (RQ2), `04_transition` (RQ3), `05_prompt_style` (prompt-suffix comparison),
+  `06_token_efficiency` (token usage across regimes), `07_budget_compliance` (TALE-EP budget adherence)
 - [`output/`](output/) — inference results (`onepass/`, `twopass/`), per-model summaries, and token budget statistics
 - [`scripts/`](scripts/) — HPC job submission (`submit_job.sh`) and token stats pre-computation (`compute_stats.py`)
 - [`src/`](src/) — main package: CLI entry point, vLLM inference, evaluation, and utilities
-- [`tests/`](tests/) — unit tests
 
 ## *development*
 
@@ -143,15 +151,6 @@ uv lock --check
 
 Note that the runtime dependencies are deliberately pinned to exact versions, so that the reported
 experiments can be reproduced — upgrade them only intentionally.
-
-### *tests*
-
-This project includes unit tests to ensure correct functionality.
-Use [`pytest`](https://docs.pytest.org/en/stable/) to run the tests with:
-
-```shell
-uv run pytest tests
-```
 
 ### *linting*
 

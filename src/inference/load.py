@@ -29,7 +29,7 @@ def _patch_olmo3_config() -> None:
         return  # older transformers without olmo3 support
 
     if not hasattr(Olmo3Config, "head_dim"):
-        Olmo3Config.head_dim = property(  # type: ignore[attr-defined]
+        Olmo3Config.head_dim = property(  # ty: ignore[unresolved-attribute]
             lambda self: self.hidden_size // self.num_attention_heads,
         )
 

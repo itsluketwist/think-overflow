@@ -26,7 +26,7 @@ Thinking-mode models (Qwen3, OLMo-Think, Nemotron) may spend their entire token 
 ## Pipeline Overview
 
 - One CLI entry point: `run`
-- Two modes: `--onepass` (unconstrained, no token cap) and `--max-think-tokens N` (two-pass overflow)
+- Three modes, selected via `--max-think-tokens`: omitted (onepass, unconstrained), `0` (nothink, empty think block), `N` (twopass overflow, reasoning capped at `N`)
 - Two config profiles in `config/inference.yaml`: `greedy` (greedy decoding, temp=0, samples=1), `default` (model-recommended sampling, samples=3)
 - Base models (with per-model default sampling params) registered in `config/models.yaml`
 - HPC job submission via `scripts/submit_job.sh`; mode auto-derived from whether `max_think_tokens` is set
@@ -36,6 +36,7 @@ Thinking-mode models (Qwen3, OLMo-Think, Nemotron) may spend their entire token 
 Controlled via `--overflow-suffix` flag:
 
 - `base`: nothing appended (pure truncation)
+- `dots`: appends "..."
 - `truncated`: appends " [reasoning truncated]"
 - `formal`: appends "... I have to stop thinking and answer now."
 - `human`: appends "... oops, I really need to stop thinking and to answer."

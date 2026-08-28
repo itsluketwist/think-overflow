@@ -37,7 +37,7 @@ parser.add_argument(
     "-cp",
     "--config-profile",
     type=str,
-    default="greedymax",
+    default="greedy",
     help="Config profile name within the config file.",
 )
 
@@ -90,7 +90,8 @@ parser.add_argument(
     default="formal",
     help=(
         "Suffix appended to truncated reasoning before closing </think>. "
-        "base=nothing (pure truncation), truncated=' [reasoning truncated]', "
+        "base=nothing (pure truncation), dots='...', "
+        "truncated=' [reasoning truncated]', "
         "formal='... I have to stop thinking and answer now.', "
         "human='... oops, I really need to stop thinking and to answer.'"
     ),

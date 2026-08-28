@@ -169,15 +169,16 @@ def compute_series_dataset(
         response = sample["text"]
         # add_generation_reasoning=True handles models where <think> is in the prompt
         # template (e.g. Qwen3, OLMo-Think), so thinkpack extracts reasoning correctly
-        parsed = thinkpack.parse(
+        # response is loaded from json so ty sees it as Unknown, not str, hence the overload
+        parsed = thinkpack.parse(  # ty: ignore[no-matching-overload]
             response=response,
             tokenizer=tokenizer,
             add_generation_reasoning=True,
         )
 
-        # count tokens without special tokens so the count matches the model's internal count
+        # transformers' Auto* factory pattern confuses ty's attribute resolution here
         n_tokens = len(
-            tokenizer.encode(parsed.reasoning, add_special_tokens=False),
+            tokenizer.encode(parsed.reasoning, add_special_tokens=False),  # ty: ignore[unresolved-attribute]
         )
         reasoning_token_counts.append(n_tokens)
 
